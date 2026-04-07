@@ -1,37 +1,8 @@
-############ RUNNING KRAKEN2 GECOCHECK #################
-#!/bin/bash
-#SBATCH -c 8
-#SBATCH -t 7-00:00
-#SBATCH -p intermediate
-#SBATCH --mem=100G
-#SBATCH -o /n/home11/avdarling/slurm/%j.gecocheck.output
-#SBATCH -e /n/home11/avdarling/slurm/%j.gecocheck.err
+############### Add in FASTqc scripts #######################################
 
-set -euo pipefail
-source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
-conda activate /n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/coverage_checker
+################ Add in MultiQC scripts #################################################
 
-cd /n/holylabs/hhealy_lab/Lab/downloads
-
-mkdir -p /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v8
-
-coverage_pipeline.py \
-    --processors 8 \
-    --sample_metadata /n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/sample_metadata_fixed.csv \
-    --project_name Ginkgo_rpip \
-    --fastq_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/gcc_merged_fastq \
-    --kraken_kreport_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5 \
-    --kraken_outraw_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5 \
-    --output_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v8 \
-    --genome_dir /n/netscratch/hhealy_lab/avdarling/gcc_genome_cache \
-    --bowtie2_db_dir /n/netscratch/hhealy_lab/avdarling/gcc_bowtie2_cache \
-    --coverage_program Bowtie2 \
-    --no_grouped_samples \
-    --read_lim 50000 \
-    --skip_cleanup
-
-
-############ Gzipping, CARD alignment Kraken2, MetaPhlAn, Sylph, Centrifuger, ################# 
+############ Gzipping, CARD alignment Kraken2, MetaPhlAn, Sylph, Centrifuger ################# 
 
 #!/bin/bash
 #SBATCH -c 16
@@ -297,3 +268,202 @@ else
 
     echo "Full MetaPhlAn run finished for ${base}."
 fi
+
+
+##### OUTPUT KRAKEN2 RELATIVE ABUNDANCES #######
+#!/bin/bash
+#SBATCH -c 8
+#SBATCH -t 3-00:00
+#SBATCH -p shared,sapphire
+#SBATCH --mem=100G
+#SBATCH -o /n/home11/avdarling/slurm/%j.kraken_ct0_5_min_hit_3_out.output
+#SBATCH -e /n/home11/avdarling/slurm/%j.kraken_ct0_5_min_hit_3_out.err
+set -euo pipefail
+
+# -------- Paths --------
+KRAKEN_DIR="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3"
+OUTPUT="/n/home11/avdarling/downloadableData/kraken_ct_0_5_min_hit_3_all_samples.tsv"
+
+cd "$KRAKEN_DIR"
+
+# Create header
+echo -e "SampleID\tpct_reads\treads_clade\treads_direct\trank\ttaxid\tname" > "$OUTPUT"
+
+# Loop over all Kraken2 report files
+for f in "$KRAKEN_DIR"/*.k2report; do
+    # Skip Bracken-generated reports
+    [[ "$f" == *_bracken.k2report ]] && continue
+    sample=$(basename "$f" | cut -d'.' -f1)
+    awk -v s="$sample" 'NR>=1 {
+        name = $6
+        gsub(/^[[:space:]]+/, "", name)
+        # Uncomment next line to keep only species-level rows:
+        # if ($4 != "S") next
+        print s, $1, $2, $3, $4, $5, name
+    }' OFS="\t" "$f" >> "$OUTPUT"
+done
+
+echo "Kraken2 report files combined into $OUTPUT"
+
+################################ EXTRACT KRAKEN2 READS FOR BLASTING (PARALLELIZED) #######################################
+
+#-------script is named extract_kraken_worker.sh-------
+#!/bin/bash
+#SBATCH -c 1
+#SBATCH -t 0-02:00
+#SBATCH -p hsph,shared,sapphire
+#SBATCH --mem=8G
+#SBATCH -o /n/home11/avdarling/slurm/%A_%a.extract_kraken_worker.out
+#SBATCH -e /n/home11/avdarling/slurm/%A_%a.extract_kraken_worker.err
+
+
+set -euo pipefail
+source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
+conda activate /n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env
+echo "CONDA_PREFIX=${CONDA_PREFIX}"
+which seqtk
+
+LIST="/n/home11/avdarling/downloadableData/sample_taxid_list_fixed.tsv"
+KRAKEN_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5"
+FASTQ_BASE="/n/netscratch/hhealy_lab/avdarling/gcc_run/fastq_unzipped"
+OUTBASE="/n/netscratch/hhealy_lab/avdarling/blast_validation"
+
+if ! command -v seqtk >/dev/null 2>&1; then
+    echo "ERROR: seqtk not found in PATH"
+    exit 1
+fi
+
+if [ ! -f "${LIST}" ]; then
+    echo "ERROR: sample/taxid list not found: ${LIST}"
+    exit 1
+fi
+
+# Pick the line corresponding to this array task
+LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "${LIST}")
+SAMPLE=$(echo "${LINE}" | awk '{print $1}')
+TAXID=$(echo  "${LINE}" | awk '{print $2}')
+
+if [ -z "${SAMPLE:-}" ] || [ -z "${TAXID:-}" ]; then
+    echo "ERROR: Empty SAMPLE or TAXID for array task ${SLURM_ARRAY_TASK_ID}"
+    exit 1
+fi
+
+echo "========================================"
+echo "Array task ${SLURM_ARRAY_TASK_ID}: SAMPLE=${SAMPLE} TAXID=${TAXID}"
+
+KRAKEN_FILE="${KRAKEN_BASE}/${SAMPLE}.kraken"
+FASTQ_R1="${FASTQ_BASE}/${SAMPLE}_R1.fastq"
+FASTQ_R2="${FASTQ_BASE}/${SAMPLE}_R2.fastq"
+OUTDIR="${OUTBASE}/blast_validation_${SAMPLE}_${TAXID}"
+READ_IDS="${OUTDIR}/readIDs.txt"
+R1_OUT_FASTQ="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fastq"
+R2_OUT_FASTQ="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fastq"
+R1_OUT_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fasta"
+R2_OUT_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fasta"
+SUMMARY="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_summary.txt"
+
+# --- Skip if output FASTAs already exist and are non-empty ---
+if [ -s "${R1_OUT_FASTA}" ] && [ -s "${R2_OUT_FASTA}" ]; then
+    echo "SKIPPING: Output FASTAs already exist for ${SAMPLE} taxid ${TAXID}"
+    echo "  ${R1_OUT_FASTA}"
+    echo "  ${R2_OUT_FASTA}"
+    exit 0
+fi
+
+# --- Check required input files ---
+for f in "${KRAKEN_FILE}" "${FASTQ_R1}" "${FASTQ_R2}"; do
+    if [ ! -f "$f" ]; then
+        echo "WARNING: File not found, skipping: $f"
+        exit 0
+    fi
+done
+
+mkdir -p "${OUTDIR}"
+
+echo "Extracting read IDs for taxid ${TAXID}"
+awk -v taxid="$TAXID" '$1=="C" && $3==taxid {print $2}' "${KRAKEN_FILE}" > "${READ_IDS}"
+NREADS=$(wc -l < "${READ_IDS}")
+echo "Found ${NREADS} classified reads for taxid ${TAXID}"
+
+{
+    echo "sample=${SAMPLE}"
+    echo "taxid=${TAXID}"
+    echo "nreads=${NREADS}"
+} > "${SUMMARY}"
+
+if [ "${NREADS}" -eq 0 ]; then
+    echo "No reads found for ${SAMPLE} taxid ${TAXID}; skipping extraction."
+    exit 0
+fi
+
+echo "Extracting paired reads from R1"
+seqtk subseq "${FASTQ_R1}" "${READ_IDS}" > "${R1_OUT_FASTQ}"
+echo "Extracting paired reads from R2"
+seqtk subseq "${FASTQ_R2}" "${READ_IDS}" > "${R2_OUT_FASTQ}"
+
+echo "R1 extracted read count:"
+grep -c "^@" "${R1_OUT_FASTQ}"
+echo "R2 extracted read count:"
+grep -c "^@" "${R2_OUT_FASTQ}"
+
+echo "Converting R1 to FASTA"
+seqtk seq -a "${R1_OUT_FASTQ}" > "${R1_OUT_FASTA}"
+echo "Converting R2 to FASTA"
+seqtk seq -a "${R2_OUT_FASTQ}" > "${R2_OUT_FASTA}"
+
+echo "Finished SAMPLE=${SAMPLE} TAXID=${TAXID}"
+echo "Outputs in ${OUTDIR}"
+
+#---------------------Script for submitting extract_kraken_worker.sh called submit_extract_kraken.sh-----------------
+
+#!/bin/bash
+# Submit one SLURM array job per line in the sample-taxid list.
+# Usage: bash submit_extract_kraken.sh
+
+LIST="/n/home11/avdarling/downloadableData/sample_taxid_list_fixed.tsv"
+WORKER="/n/home11/avdarling/scripts/extract_kraken_worker.sh"
+
+if [ ! -f "${LIST}" ]; then
+    echo "ERROR: List not found: ${LIST}"
+    exit 1
+fi
+
+# Count non-empty lines
+NLINES=$(grep -c '[^[:space:]]' "${LIST}")
+echo "Submitting array job for ${NLINES} sample-taxid pairs..."
+
+sbatch --array="1-${NLINES}%200" "${WORKER}"
+# %200 caps concurrent running jobs at 200 at a time.
+# Raise or lower this based on your cluster's fair-share policy.
+
+############ RUNNING KRAKEN2 GECOCHECK #################
+#!/bin/bash
+#SBATCH -c 8
+#SBATCH -t 7-00:00
+#SBATCH -p intermediate
+#SBATCH --mem=100G
+#SBATCH -o /n/home11/avdarling/slurm/%j.gecocheck.output
+#SBATCH -e /n/home11/avdarling/slurm/%j.gecocheck.err
+
+set -euo pipefail
+source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
+conda activate /n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/coverage_checker
+
+cd /n/holylabs/hhealy_lab/Lab/downloads
+
+mkdir -p /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v8
+
+coverage_pipeline.py \
+    --processors 8 \
+    --sample_metadata /n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/sample_metadata_fixed.csv \
+    --project_name Ginkgo_rpip \
+    --fastq_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/gcc_merged_fastq \
+    --kraken_kreport_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5 \
+    --kraken_outraw_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5 \
+    --output_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v8 \
+    --genome_dir /n/netscratch/hhealy_lab/avdarling/gcc_genome_cache \
+    --bowtie2_db_dir /n/netscratch/hhealy_lab/avdarling/gcc_bowtie2_cache \
+    --coverage_program Bowtie2 \
+    --no_grouped_samples \
+    --read_lim 50000 \
+    --skip_cleanup
