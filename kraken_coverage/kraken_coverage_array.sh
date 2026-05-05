@@ -4,14 +4,14 @@
 #SBATCH -t 3-00:00
 #SBATCH -p hsph,shared,sapphire
 #SBATCH --mem=100G
-#SBATCH --array=0-5724%20       # 5725 total combinations (0-indexed)
+#SBATCH --array=0-4540%20
 #SBATCH -o /n/home11/avdarling/slurm/%A_%a.kraken_coverage.output
 #SBATCH -e /n/home11/avdarling/slurm/%A_%a.kraken_coverage.err
 
 set -euo pipefail
 
 # ── Combinations file (one line per sample-taxid pair, tab-separated) ─────────
-COMBINATIONS="/n/home11/avdarling/kraken_coverage_combinations.txt"
+COMBINATIONS="/n/home11/avdarling/downloadableData/kraken_coverage_combinations_hospital.txt"
 
 # Read this task's sample + taxid from the combinations file
 COMBO=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$COMBINATIONS")
@@ -25,15 +25,15 @@ fi
 
 # ── Tool paths ─────────────────────────────────────────────────────────────────
 THREADS=8
-PYTHON="/n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env/bin/python"
+PYTHON="/n/home11/avdarling/miniconda3/bin/python"
 BWA="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/bwa"
 SAMTOOLS="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/samtools"
 MOSDEPTH="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/mosdepth"
 KRAKENTOOLS="/n/home11/avdarling/KrakenTools/extract_kraken_reads.py"
 
 # ── Input paths ────────────────────────────────────────────────────────────────
-KRAKEN="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5/${SAMPLE}.kraken"
-REPORT="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5/${SAMPLE}.kreport"
+KRAKEN="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/${SAMPLE}.kraken"
+REPORT="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/${SAMPLE}.kreport"
 R1="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/${SAMPLE}_R1.fastq.gz"
 R2="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/${SAMPLE}_R2.fastq.gz"
 REF="/n/netscratch/hhealy_lab/avdarling/reference_genomes/taxid_${TAXID}/reference_genome.fna"
@@ -41,6 +41,12 @@ REF="/n/netscratch/hhealy_lab/avdarling/reference_genomes/taxid_${TAXID}/referen
 # ── Output paths ───────────────────────────────────────────────────────────────
 OUTDIR="/n/netscratch/hhealy_lab/avdarling/kraken_coverage/${SAMPLE}_${TAXID}"
 mkdir -p "$OUTDIR"
+
+if [[ -f "${OUTDIR}/coverage_metrics.tsv" ]]; then
+    echo "Already complete, skipping"
+    exit 0
+fi
+
 cd "$OUTDIR"
 
 EXTRACT_R1="${OUTDIR}/${SAMPLE}_${TAXID}_R1.fastq"
@@ -61,6 +67,8 @@ for f in "$PYTHON" "$BWA" "$SAMTOOLS" "$MOSDEPTH" "$KRAKEN" "$REPORT" "$R1" "$R2
     fi
 done
 
+
+
 # ── Extract Kraken-classified reads ───────────────────────────────────────────
 "$PYTHON" "$KRAKENTOOLS" \
     -k "$KRAKEN" \
@@ -72,7 +80,7 @@ done
     --fastq-output \
     -o "$EXTRACT_R1" \
     -o2 "$EXTRACT_R2"
-
+    
 # ── Handle zero-read case ─────────────────────────────────────────────────────
 if [[ ! -s "$EXTRACT_R1" || ! -s "$EXTRACT_R2" ]]; then
     echo "No extracted reads for sample=${SAMPLE}, taxid=${TAXID}" | tee no_reads.txt
@@ -111,7 +119,6 @@ MAPPED_READS=$("$SAMTOOLS" view -c -F 4 mapped.sorted.bam)
 echo "Running mosdepth..."
 "$MOSDEPTH" \
     --threads "$THREADS" \
-    --no-abbrev \
     --quantize 0:1:10: \
     "${OUTDIR}/mosdepth" \
     mapped.sorted.bam
