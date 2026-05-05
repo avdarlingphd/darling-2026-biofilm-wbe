@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH -c 8
 #SBATCH -t 1-00:00
-#SBATCH -p hsph
+#SBATCH -p hsph,shared,sapphire
 #SBATCH --mem=32G
 #SBATCH -o /n/home11/avdarling/slurm/%j.blast_BANANA_SAMPLE_BANANA_TAXID.out
 #SBATCH -e /n/home11/avdarling/slurm/%j.blast_BANANA_SAMPLE_BANANA_TAXID.err
 set -euo pipefail
 
 # Use full paths — avoids conda activation issues in non-interactive SLURM shells
-BLASTN="/n/netscratch/hhealy_lab/avdarling_conda_envs/blast_env2/bin/blastn"
+BLASTN="/n/home11/avdarling/conda_envs/blast_env/bin/blastn"
 SEQTK="/n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env/bin/seqtk"
 export BLASTDB="/n/netscratch/informatics/Everyone/external_repos/blast/nt/latest/"
 
