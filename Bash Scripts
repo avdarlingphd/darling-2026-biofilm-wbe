@@ -73,30 +73,6 @@ else
 fi
 
 
-# ---------------- Bracken ----------------
-source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
-conda activate bracken_env
-
-bracken_levels=('S' 'G' 'F' 'O' 'C' 'P')
-bracken_out_dir4="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/bracken_output_ct0_5_min_hit_3"
-
-mkdir -p "$bracken_out_dir4"
-
-for level in "${bracken_levels[@]}"; do
-    bracken_output4="${bracken_out_dir4}/${base}.bracken_${level}"
-    if [ -f "$bracken_output4" ]; then
-        echo "Bracken level $level output exists. Skipping..."
-    else
-        echo "Running Bracken level $level for ${base}..."
-        bracken \
-            -d /n/holylabs/hhealy_lab/Lab/databases/kraken2_pluspf \
-            -i "$kraken_report4" \
-            -r 150 \
-            -l "$level" \
-            -t 10 \
-            -o "$bracken_output4"
-    fi
-done
 
 
 # ---------------- CARD ----------------
