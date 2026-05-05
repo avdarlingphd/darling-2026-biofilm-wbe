@@ -99,69 +99,34 @@ for level in "${bracken_levels[@]}"; do
 done
 
 
-# ---------------- CARD and rpoB Normalization ----------------
-source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
-conda activate diamond_env
+# ---------------- CARD ----------------
+source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh​
+conda activate diamond_env​
 
-ARGDB='/n/holylabs/hhealy_lab/Lab/databases/CARD/protein_fasta_protein_homolog_model.dmnd'
-RPOB_DB='/n/holylabs/hhealy_lab/Lab/databases/RpoB.dmnd'
+card_out_dir="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/CARD_output"​
+mkdir -p "$card_out_dir"​
+card_output="${card_out_dir}/${base}.card"​
 
+if [ -f "$card_output" ]; then​
+echo "CARD output exists. Skipping..."​
+else​
+echo "Running CARD for ${base}..."​
+temp_fastq="temp_${base}_combined.fastq.gz"​
 
-# Use netscratch for temporary files
-NETSCRATCH="/n/netscratch/hhealy_lab/$USER/rpob_out"
-mkdir -p "$NETSCRATCH"
-
-card_out_dir="${NETSCRATCH}/CARD_output"
-rpob_out_dir="${NETSCRATCH}/results"
-mkdir -p "$card_out_dir"
-mkdir -p "$rpob_out_dir"
-card_output="${card_out_dir}/${base}.card"
-arg_short_out="${NETSCRATCH}/${base}_arg_short.csv"
-rpob_intermediate_out="${NETSCRATCH}/${base}_rpob_intermediate.csv"
-rpob_normalized_out="${rpob_out_dir}/${base}_rpob_normalized_card.csv"
-
-if [ -f "$rpob_normalized_out" ]; then
-    echo "rpob-normalized CARD output exists. Skipping..."
-    
-else
-    echo "Running rpoB-normalization for ${base}..."
-    
-    temp_fastq="${NETSCRATCH}/${base}_merged_for_rpob.fastq.gz"
-    echo "Merging $input_R1 and $input_R2 into $temp_fastq ..."
-    cat "$input_R1" "$input_R2" > "$temp_fastq"
-        
-    diamond blastx \
-        -d "$ARGDB" \
-        -q "$temp_fastq" \
-        -o "$arg_short_out" \
-        --outfmt 6 \
-        --max-target-seqs 1 \
-        --id 80 \
-        --evalue 1e-10
-        
-    diamond blastx \
-        -d "$RPOB_DB" \
-        -q "$temp_fastq" \
-        -o "$rpob_intermediate_out" \
-        --outfmt 6 \
-        --max-target-seqs 1 \
-        --id 40 \
-        --evalue 1e-10
-        
-    python /n/home11/avdarling/scripts/rp_abun.py \
-        -a "$arg_short_out" \
-        -r "$rpob_intermediate_out" \
-        -la /n/holylabs/hhealy_lab/Lab/databases/CARD/protein_fasta_protein_homolog_model.len \
-        -lr /n/holylabs/hhealy_lab/Lab/databases/RpoB.ref.len \
-        --db card \
-        --rpob_identity 40 \
-        -o "$rpob_normalized_out"
-        
-    
-    # Clean up temporary files
-    echo "Cleaning up temporary files"
-    rm -f "$temp_fastq" "$arg_short_out" "$rpob_intermediate_out"
-
+# Combine R1 and R2 into one gzipped FASTQ​
+echo "Combining R1 and R2 into $temp_fastq ..."​
+cat "$input_R1" "$input_R2" > "$temp_fastq"
+diamond blastx \​
+-d /n/home11/avdarling/databases/CARD/card_db \​
+-q "$temp_fastq" \​
+-o "$card_output" \​
+--max-target-seqs 1 \​
+--evalue 1e-10 \​
+--id 80​
+​
+# Clean up temporary combined file​
+echo "Cleaning up temporary file: $temp_fastq"​
+rm -f "$temp_fastq"​
 fi
 
 # ---------------- Centrifuger ----------------
@@ -274,7 +239,7 @@ fi
 #!/bin/bash
 #SBATCH -c 8
 #SBATCH -t 3-00:00
-#SBATCH -p shared,sapphire
+#SBATCH -p hsph,shared,sapphire
 #SBATCH --mem=100G
 #SBATCH -o /n/home11/avdarling/slurm/%j.kraken_ct0_5_min_hit_3_out.output
 #SBATCH -e /n/home11/avdarling/slurm/%j.kraken_ct0_5_min_hit_3_out.err
@@ -305,136 +270,223 @@ done
 
 echo "Kraken2 report files combined into $OUTPUT"
 
-################################ EXTRACT KRAKEN2 READS FOR BLASTING (PARALLELIZED) #######################################
+##################### EXTRACT KRAKEN2 READS FOR BLASTING (PARALLELIZED) USING SEQTK AND EXTRACT_READS_PYTHON ########################
 
-#-------script is named extract_kraken_worker.sh-------
+###-------script is named extract_kraken_base.sh-------
 #!/bin/bash
 #SBATCH -c 1
-#SBATCH -t 0-02:00
+#SBATCH -t 0-04:00
 #SBATCH -p hsph,shared,sapphire
-#SBATCH --mem=8G
-#SBATCH -o /n/home11/avdarling/slurm/%A_%a.extract_kraken_worker.out
-#SBATCH -e /n/home11/avdarling/slurm/%A_%a.extract_kraken_worker.err
-
-
+#SBATCH --mem=16G
+#SBATCH -o /n/home11/avdarling/slurm/%j.extract_BANANA_SAMPLE.out
+#SBATCH -e /n/home11/avdarling/slurm/%j.extract_BANANA_SAMPLE.err
 set -euo pipefail
 source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
 conda activate /n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env
 echo "CONDA_PREFIX=${CONDA_PREFIX}"
 which seqtk
 
-LIST="/n/home11/avdarling/downloadableData/sample_taxid_list_fixed.tsv"
-KRAKEN_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5"
-FASTQ_BASE="/n/netscratch/hhealy_lab/avdarling/gcc_run/fastq_unzipped"
+KRAKENTOOLS="/n/home11/avdarling/KrakenTools/extract_kraken_reads.py"
+PYTHON="/n/home11/avdarling/miniconda3/bin/python3"
+if [ ! -f "${KRAKENTOOLS}" ]; then
+    echo "ERROR: extract_kraken_reads.py not found at ${KRAKENTOOLS}"
+    exit 1
+fi
+if [ ! -f "${PYTHON}" ]; then
+    echo "ERROR: base python3 not found at ${PYTHON}"
+    exit 1
+fi
+
+SAMPLE="BANANA_SAMPLE"
+TAXIDS=(BANANA_TAXIDS)   # array of taxids for this sample
+
+KRAKEN_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3"
+FASTQ_BASE="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs"
 OUTBASE="/n/netscratch/hhealy_lab/avdarling/blast_validation"
 
-if ! command -v seqtk >/dev/null 2>&1; then
-    echo "ERROR: seqtk not found in PATH"
-    exit 1
-fi
-
-if [ ! -f "${LIST}" ]; then
-    echo "ERROR: sample/taxid list not found: ${LIST}"
-    exit 1
-fi
-
-# Pick the line corresponding to this array task
-LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "${LIST}")
-SAMPLE=$(echo "${LINE}" | awk '{print $1}')
-TAXID=$(echo  "${LINE}" | awk '{print $2}')
-
-if [ -z "${SAMPLE:-}" ] || [ -z "${TAXID:-}" ]; then
-    echo "ERROR: Empty SAMPLE or TAXID for array task ${SLURM_ARRAY_TASK_ID}"
-    exit 1
-fi
-
-echo "========================================"
-echo "Array task ${SLURM_ARRAY_TASK_ID}: SAMPLE=${SAMPLE} TAXID=${TAXID}"
-
 KRAKEN_FILE="${KRAKEN_BASE}/${SAMPLE}.kraken"
-FASTQ_R1="${FASTQ_BASE}/${SAMPLE}_R1.fastq"
-FASTQ_R2="${FASTQ_BASE}/${SAMPLE}_R2.fastq"
-OUTDIR="${OUTBASE}/blast_validation_${SAMPLE}_${TAXID}"
-READ_IDS="${OUTDIR}/readIDs.txt"
-R1_OUT_FASTQ="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fastq"
-R2_OUT_FASTQ="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fastq"
-R1_OUT_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fasta"
-R2_OUT_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fasta"
-SUMMARY="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_summary.txt"
+KREPORT_FILE="${KRAKEN_BASE}/${SAMPLE}.kreport"
+FASTQ_R1="${FASTQ_BASE}/${SAMPLE}_R1.fastq.gz"
+FASTQ_R2="${FASTQ_BASE}/${SAMPLE}_R2.fastq.gz"
 
-# --- Skip if output FASTAs already exist and are non-empty ---
-if [ -s "${R1_OUT_FASTA}" ] && [ -s "${R2_OUT_FASTA}" ]; then
-    echo "SKIPPING: Output FASTAs already exist for ${SAMPLE} taxid ${TAXID}"
-    echo "  ${R1_OUT_FASTA}"
-    echo "  ${R2_OUT_FASTA}"
-    exit 0
-fi
-
-# --- Check required input files ---
-for f in "${KRAKEN_FILE}" "${FASTQ_R1}" "${FASTQ_R2}"; do
+# --- Validate shared inputs ---
+for f in "${KRAKEN_FILE}" "${KREPORT_FILE}" "${FASTQ_R1}" "${FASTQ_R2}"; do
     if [ ! -f "$f" ]; then
-        echo "WARNING: File not found, skipping: $f"
-        exit 0
+        echo "ERROR: Required file not found: $f"
+        exit 1
     fi
 done
 
-mkdir -p "${OUTDIR}"
+echo "Processing sample: ${SAMPLE}"
+echo "Taxids: ${TAXIDS[*]}"
 
-echo "Extracting read IDs for taxid ${TAXID}"
-awk -v taxid="$TAXID" '$1=="C" && $3==taxid {print $2}' "${KRAKEN_FILE}" > "${READ_IDS}"
-NREADS=$(wc -l < "${READ_IDS}")
-echo "Found ${NREADS} classified reads for taxid ${TAXID}"
+for TAXID in "${TAXIDS[@]}"; do
+    echo "========================================"
+    echo "  TAXID=${TAXID}"
 
-{
-    echo "sample=${SAMPLE}"
-    echo "taxid=${TAXID}"
-    echo "nreads=${NREADS}"
-} > "${SUMMARY}"
+    OUTDIR="${OUTBASE}/blast_validation_${SAMPLE}_${TAXID}"
+    R1_OUT_FASTQ="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fastq"
+    R2_OUT_FASTQ="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fastq"
+    R1_OUT_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fasta"
+    R2_OUT_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fasta"
+    SUMMARY="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_summary.txt"
 
-if [ "${NREADS}" -eq 0 ]; then
-    echo "No reads found for ${SAMPLE} taxid ${TAXID}; skipping extraction."
-    exit 0
-fi
+    # --- SKIP if output FASTAs already exist and are non-empty ---
+    if [ -s "${R1_OUT_FASTA}" ] && [ -s "${R2_OUT_FASTA}" ]; then
+        echo "  SKIPPING: FASTAs already exist for taxid ${TAXID}"
+        continue
+    fi
 
-echo "Extracting paired reads from R1"
-seqtk subseq "${FASTQ_R1}" "${READ_IDS}" > "${R1_OUT_FASTQ}"
-echo "Extracting paired reads from R2"
-seqtk subseq "${FASTQ_R2}" "${READ_IDS}" > "${R2_OUT_FASTQ}"
+    mkdir -p "${OUTDIR}"
 
-echo "R1 extracted read count:"
-grep -c "^@" "${R1_OUT_FASTQ}"
-echo "R2 extracted read count:"
-grep -c "^@" "${R2_OUT_FASTQ}"
+    # --- Extract reads using KrakenTools (includes child taxon reads) ---
+    # extract_kraken_reads.py uses the kreport to walk the taxonomy tree,
+    # so reads classified to any strain/subspecies under TAXID are captured.
+    echo "  Extracting paired reads for taxid ${TAXID} (including children)"
+    "${PYTHON}" "${KRAKENTOOLS}" \
+        -k "${KRAKEN_FILE}" \
+        -r "${KREPORT_FILE}" \
+        -s  "${FASTQ_R1}" \
+        -s2 "${FASTQ_R2}" \
+        -t  "${TAXID}" \
+        --include-children \
+        --fastq-output \
+        -o  "${R1_OUT_FASTQ}" \
+        -o2 "${R2_OUT_FASTQ}"
 
-echo "Converting R1 to FASTA"
-seqtk seq -a "${R1_OUT_FASTQ}" > "${R1_OUT_FASTA}"
-echo "Converting R2 to FASTA"
-seqtk seq -a "${R2_OUT_FASTQ}" > "${R2_OUT_FASTA}"
+    # --- Count extracted reads ---
+    NREADS_R1=0
+    NREADS_R2=0
+    if [ -s "${R1_OUT_FASTQ}" ]; then
+        NREADS_R1=$(grep -c "^@" "${R1_OUT_FASTQ}" || true)
+    fi
+    if [ -s "${R2_OUT_FASTQ}" ]; then
+        NREADS_R2=$(grep -c "^@" "${R2_OUT_FASTQ}" || true)
+    fi
+    echo "  R1 extracted reads: ${NREADS_R1}"
+    echo "  R2 extracted reads: ${NREADS_R2}"
 
-echo "Finished SAMPLE=${SAMPLE} TAXID=${TAXID}"
-echo "Outputs in ${OUTDIR}"
+    {
+        echo "sample=${SAMPLE}"
+        echo "taxid=${TAXID}"
+        echo "nreads_R1=${NREADS_R1}"
+        echo "nreads_R2=${NREADS_R2}"
+    } > "${SUMMARY}"
 
-#---------------------Script for submitting extract_kraken_worker.sh called submit_extract_kraken.sh-----------------
+    if [ "${NREADS_R1}" -eq 0 ]; then
+        echo "  No reads found for taxid ${TAXID}; skipping FASTA conversion."
+        continue
+    fi
 
-#!/bin/bash
-# Submit one SLURM array job per line in the sample-taxid list.
-# Usage: bash submit_extract_kraken.sh
+    # --- Convert FASTQ → FASTA (seqtk is fast for this step) ---
+    echo "  Converting R1 to FASTA"
+    seqtk seq -a "${R1_OUT_FASTQ}" > "${R1_OUT_FASTA}"
+    echo "  Converting R2 to FASTA"
+    seqtk seq -a "${R2_OUT_FASTQ}" > "${R2_OUT_FASTA}"
 
-LIST="/n/home11/avdarling/downloadableData/sample_taxid_list_fixed.tsv"
-WORKER="/n/home11/avdarling/scripts/extract_kraken_worker.sh"
+    echo "  Done: ${OUTDIR}"
+done
 
-if [ ! -f "${LIST}" ]; then
-    echo "ERROR: List not found: ${LIST}"
-    exit 1
-fi
+echo "========================================"
+echo "All taxids processed for ${SAMPLE}."
 
-# Count non-empty lines
-NLINES=$(grep -c '[^[:space:]]' "${LIST}")
-echo "Submitting array job for ${NLINES} sample-taxid pairs..."
+#################Script for submitting extract_kraken_base.sh called makeScripts_extract.py #################
 
-sbatch --array="1-${NLINES}%200" "${WORKER}"
-# %200 caps concurrent running jobs at 200 at a time.
-# Raise or lower this based on your cluster's fair-share policy.
+#!/usr/bin/env python3
+"""
+Generate per-sample SLURM scripts for Kraken2 read extraction.
+
+Each job processes ONE sample and ALL its taxids in a single pass over the
+.kraken file — much faster than one job per sample/taxid pair.
+
+Usage:
+    python makeScripts_extract.py \
+        --taxid_list /n/home11/avdarling/downloadableData/sample_taxid_list_all_pathogens.tsv \
+        --base_script /n/home11/avdarling/scripts/extract_kraken_base.sh \
+        --outdir /n/home11/avdarling/scripts/extract_scripts
+
+Then submit with:
+    bash submitAll_extract.sh
+"""
+
+import os
+import argparse
+from collections import defaultdict
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate per-sample SLURM extraction scripts"
+    )
+    parser.add_argument(
+        "--taxid_list", required=True,
+        help="TSV with columns: sample, taxid (no header)"
+    )
+    parser.add_argument(
+        "--base_script", required=True,
+        help="Path to extract_kraken_base.sh template"
+    )
+    parser.add_argument(
+        "--outdir", required=True,
+        help="Directory to write generated scripts"
+    )
+    args = parser.parse_args()
+
+    # --- Read base template ---
+    with open(args.base_script) as f:
+        template = f.read()
+
+    # --- Group taxids by sample ---
+    sample_taxids = defaultdict(list)
+    with open(args.taxid_list) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+            sample, taxid = parts[0], parts[1]
+            sample_taxids[sample].append(taxid)
+
+    os.makedirs(args.outdir, exist_ok=True)
+
+    script_paths = []
+    for sample, taxids in sorted(sample_taxids.items()):
+        taxid_array = " ".join(taxids)  # bash array elements: "570 573 562 ..."
+        script = template.replace("BANANA_SAMPLE", sample)
+        script = script.replace("BANANA_TAXIDS", taxid_array)
+
+        script_path = os.path.join(args.outdir, f"extract_{sample}.sh")
+        with open(script_path, "w") as f:
+            f.write(script)
+        script_paths.append(script_path)
+
+    # --- Write submitAll script ---
+    submit_path = os.path.join(args.outdir, "submitAll_extract.sh")
+    with open(submit_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        f.write("# Submit all per-sample extraction jobs\n")
+        f.write(f"# Generated for {len(script_paths)} samples\n\n")
+        for path in script_paths:
+            f.write(f"sbatch {path}\n")
+        f.write('\necho "Submitted all extraction jobs."\n')
+
+    print(f"Generated {len(script_paths)} scripts in: {args.outdir}")
+    print(f"Submit script: {submit_path}")
+    print(f"\nTo submit all jobs:")
+    print(f"  bash {submit_path}")
+    print(f"\nSample breakdown:")
+    counts = sorted([(s, len(t)) for s, t in sample_taxids.items()],
+                    key=lambda x: -x[1])
+    print(f"  Max taxids per sample:  {counts[0][1]}  ({counts[0][0]})")
+    print(f"  Min taxids per sample:  {counts[-1][1]}  ({counts[-1][0]})")
+    total = sum(len(t) for t in sample_taxids.values())
+    print(f"  Total sample/taxid pairs: {total}")
+
+
+if __name__ == "__main__":
+    main()
 
 ############ RUNNING KRAKEN2 GECOCHECK #################
 #!/bin/bash
@@ -448,22 +500,307 @@ sbatch --array="1-${NLINES}%200" "${WORKER}"
 set -euo pipefail
 source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
 conda activate /n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/coverage_checker
+cd /n/netscratch/hhealy_lab/avdarling/gcc_run
 
-cd /n/holylabs/hhealy_lab/Lab/downloads
+DEST=/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024
 
-mkdir -p /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v8
+mkdir -p /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v9
 
 coverage_pipeline.py \
     --processors 8 \
     --sample_metadata /n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/sample_metadata_fixed.csv \
     --project_name Ginkgo_rpip \
     --fastq_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/gcc_merged_fastq \
-    --kraken_kreport_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5 \
-    --kraken_outraw_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5 \
-    --output_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v8 \
-    --genome_dir /n/netscratch/hhealy_lab/avdarling/gcc_genome_cache \
-    --bowtie2_db_dir /n/netscratch/hhealy_lab/avdarling/gcc_bowtie2_cache \
+    --kraken_kreport_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3 \
+    --kraken_outraw_dir /n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3 \
+    --output_dir /n/netscratch/hhealy_lab/avdarling/gcc_run/Ginkgo_rpip_coverage_results_v9 \
+    --genome_dir ${DEST}/gcc_genome_cache \
+    --bowtie2_db_dir ${DEST}/gcc_bowtie2_cache \
     --coverage_program Bowtie2 \
     --no_grouped_samples \
     --read_lim 50000 \
     --skip_cleanup
+
+
+####### MEDIAN COVERAGE AND BREADTH ESTIMATION USING KRAKENTOOLS, BWAMEM, SAM TOOLS, AND MOSDEPTH #################
+
+# (download_references.sh)
+
+#!/bin/bash
+#SBATCH -J download_refs
+#SBATCH -c 1
+#SBATCH -t 4:00:00
+#SBATCH -p shared
+#SBATCH --mem=4G
+#SBATCH -o /n/home11/avdarling/slurm/%j.download_refs.out
+#SBATCH -e /n/home11/avdarling/slurm/%j.download_refs.err
+
+# Download NCBI reference genomes for all taxids in taxids.txt
+# Usage: sbatch download_references.sh
+# Or interactively: bash download_references.sh
+#
+# Reads taxids from: /n/home11/avdarling/taxids.txt  (one taxid per line)
+# Saves each genome to: /n/netscratch/hhealy_lab/avdarling/reference_genomes/taxid_XXXXX/reference_genome.fna
+
+set -euo pipefail
+
+TAXIDS_FILE="/n/home11/avdarling/taxids.txt"
+REF_BASE="/n/netscratch/hhealy_lab/avdarling/reference_genomes"
+
+# Activate conda to get the datasets CLI
+# (datasets is a compiled binary — works even though Python in this env is broken)
+source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
+conda activate /n/netscratch/hhealy_lab/avdarling_conda_envs/kraken2_2.17
+
+if [[ ! -f "$TAXIDS_FILE" ]]; then
+    echo "ERROR: taxids file not found: $TAXIDS_FILE" >&2
+    echo "Create a file with one taxid per line, e.g.:" >&2
+    echo "  13373" >&2
+    echo "  2697049" >&2
+    exit 1
+fi
+
+echo "Downloading reference genomes for taxids in: $TAXIDS_FILE"
+echo ""
+
+while IFS= read -r taxid || [[ -n "$taxid" ]]; do
+    # Skip blank lines and comments
+    [[ -z "$taxid" || "$taxid" == \#* ]] && continue
+
+    REFDIR="${REF_BASE}/taxid_${taxid}"
+    REF="${REFDIR}/reference_genome.fna"
+
+    if [[ -f "$REF" ]]; then
+        echo "[SKIP] taxid ${taxid} — reference already exists"
+        continue
+    fi
+
+    echo "[DOWNLOAD] taxid ${taxid}..."
+    mkdir -p "$REFDIR"
+    cd "$REFDIR"
+
+    datasets download genome taxon "$taxid" \
+        --reference \
+        --include genome \
+        --filename genome.zip || {
+            echo "  WARNING: download failed for taxid ${taxid}, skipping" >&2
+            cd - > /dev/null
+            continue
+        }
+
+    unzip genome.zip -d . > /dev/null
+
+    # Use cat instead of mv — handles genomes with multiple .fna files (e.g. multiple chromosomes)
+    FNA_FILES=(ncbi_dataset/data/*/*_genomic.fna)
+    if [[ ${#FNA_FILES[@]} -eq 0 ]]; then
+        echo "  WARNING: no *_genomic.fna found for taxid ${taxid}, skipping" >&2
+        cd - > /dev/null
+        continue
+    fi
+    cat "${FNA_FILES[@]}" > reference_genome.fna
+
+    # Clean up zip and temp files
+    rm -rf genome.zip ncbi_dataset README.md
+
+    echo "  -> Saved: $REF"
+    cd - > /dev/null
+
+done < "$TAXIDS_FILE"
+
+echo ""
+echo "All done. Reference genomes in: $REF_BASE"
+
+
+#(kraken_coverage_array.sh)
+
+
+#!/bin/bash
+#SBATCH -J kraken_cov
+#SBATCH -c 8
+#SBATCH -t 3-00:00
+#SBATCH -p shared,sapphire
+#SBATCH --mem=100G
+#SBATCH --array=0-999%20        # ← UPDATE 999 to (total combinations - 1); %20 = max 20 jobs at once
+#SBATCH -o /n/home11/avdarling/slurm/%A_%a.kraken_coverage.output
+#SBATCH -e /n/home11/avdarling/slurm/%A_%a.kraken_coverage.err
+
+set -euo pipefail
+
+# ── Combinations file (one line per sample-taxid pair, tab-separated) ─────────
+COMBINATIONS="/n/home11/avdarling/kraken_coverage_combinations.txt"
+
+# Read this task's sample + taxid from the combinations file
+COMBO=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$COMBINATIONS")
+SAMPLE=$(echo "$COMBO" | awk '{print $1}')
+TAXID=$(echo "$COMBO"  | awk '{print $2}')
+
+if [[ -z "$SAMPLE" || -z "$TAXID" ]]; then
+    echo "ERROR: empty SAMPLE or TAXID for array index ${SLURM_ARRAY_TASK_ID}" >&2
+    exit 1
+fi
+
+# ── Tool paths ─────────────────────────────────────────────────────────────────
+THREADS=8
+PYTHON="/n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env/bin/python"
+BWA="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/bwa"
+SAMTOOLS="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/samtools"
+MOSDEPTH="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/mosdepth"
+KRAKENTOOLS="/n/home11/avdarling/KrakenTools/extract_kraken_reads.py"
+
+# ── Input paths ────────────────────────────────────────────────────────────────
+KRAKEN="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5/${SAMPLE}.kraken"
+REPORT="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5/${SAMPLE}.kreport"
+R1="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/${SAMPLE}_R1.fastq.gz"
+R2="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/${SAMPLE}_R2.fastq.gz"
+REF="/n/netscratch/hhealy_lab/avdarling/reference_genomes/taxid_${TAXID}/reference_genome.fna"
+
+# ── Output paths ───────────────────────────────────────────────────────────────
+OUTDIR="/n/netscratch/hhealy_lab/avdarling/kraken_coverage/${SAMPLE}_${TAXID}"
+mkdir -p "$OUTDIR"
+cd "$OUTDIR"
+
+EXTRACT_R1="${OUTDIR}/${SAMPLE}_${TAXID}_R1.fastq"
+EXTRACT_R2="${OUTDIR}/${SAMPLE}_${TAXID}_R2.fastq"
+
+echo "=========================================="
+echo "Array task : ${SLURM_ARRAY_TASK_ID}"
+echo "Sample     : ${SAMPLE}"
+echo "TaxID      : ${TAXID}"
+echo "=========================================="
+date
+
+# ── Sanity-check required files ────────────────────────────────────────────────
+for f in "$PYTHON" "$BWA" "$SAMTOOLS" "$MOSDEPTH" "$KRAKEN" "$REPORT" "$R1" "$R2" "$REF" "$KRAKENTOOLS"; do
+    if [[ ! -e "$f" ]]; then
+        echo "ERROR: required file not found: $f" >&2
+        exit 1
+    fi
+done
+
+# ── Extract Kraken-classified reads ───────────────────────────────────────────
+"$PYTHON" "$KRAKENTOOLS" \
+    -k "$KRAKEN" \
+    -r "$REPORT" \
+    -s1 "$R1" \
+    -s2 "$R2" \
+    -t "$TAXID" \
+    --include-children \
+    --fastq-output \
+    -o "$EXTRACT_R1" \
+    -o2 "$EXTRACT_R2"
+
+# ── Handle zero-read case ─────────────────────────────────────────────────────
+if [[ ! -s "$EXTRACT_R1" || ! -s "$EXTRACT_R2" ]]; then
+    echo "No extracted reads for sample=${SAMPLE}, taxid=${TAXID}" | tee no_reads.txt
+    cat > coverage_metrics.tsv <<EOF
+sample	taxid	extracted_r1_reads	extracted_r2_reads	mapped_reads	reference_length	breadth_1x	breadth_10x	mean_depth	median_depth
+${SAMPLE}	${TAXID}	0	0	0	NA	0	0	0	0
+EOF
+    exit 0
+fi
+
+EXTRACTED_R1_READS=$(awk 'END{print NR/4}' "$EXTRACT_R1")
+EXTRACTED_R2_READS=$(awk 'END{print NR/4}' "$EXTRACT_R2")
+echo "Extracted R1 reads: $EXTRACTED_R1_READS"
+echo "Extracted R2 reads: $EXTRACTED_R2_READS"
+
+# ── Build BWA index if needed ─────────────────────────────────────────────────
+if [[ ! -f "${REF}.bwt" ]]; then
+    echo "Building BWA index..."
+    "$BWA" index "$REF"
+fi
+
+# ── Align with BWA ────────────────────────────────────────────────────────────
+echo "Aligning extracted reads with BWA..."
+"$BWA" mem -t "$THREADS" "$REF" "$EXTRACT_R1" "$EXTRACT_R2" 2> bwa.log \
+    | "$SAMTOOLS" view -@ "$THREADS" -b - \
+    | "$SAMTOOLS" sort -@ "$THREADS" -o mapped.sorted.bam
+
+"$SAMTOOLS" index mapped.sorted.bam
+
+MAPPED_READS=$("$SAMTOOLS" view -c -F 4 mapped.sorted.bam)
+
+# ── Run mosdepth for coverage metrics ────────────────────────────────────────
+# --no-abbrev       : write full chromosome names
+# --quantize 0:1:10: : create coverage bands (0x, 1-9x, 10x+) for breadth
+# --threads         : parallel decompression
+echo "Running mosdepth..."
+"$MOSDEPTH" \
+    --threads "$THREADS" \
+    --no-abbrev \
+    --quantize 0:1:10: \
+    "${OUTDIR}/mosdepth" \
+    mapped.sorted.bam
+
+# ── Extract metrics from mosdepth output ──────────────────────────────────────
+# Summary file columns: chrom, length, bases, mean, min, max
+MEAN_DEPTH=$(awk '$1=="total" {print $4}' "${OUTDIR}/mosdepth.mosdepth.summary.txt")
+REFERENCE_LENGTH=$(awk '$1=="total" {print $2}' "${OUTDIR}/mosdepth.mosdepth.summary.txt")
+
+# Breadth: fraction of reference covered at >=1x and >=10x
+# Quantized bed columns: chrom, start, end, band (e.g. "1:10" or "10:inf")
+BREADTH_1X=$(zcat "${OUTDIR}/mosdepth.quantized.bed.gz" | awk -v reflen="$REFERENCE_LENGTH" '
+    $4 != "0:1" { sum += ($3 - $2) }
+    END { printf "%.6f", (reflen>0 ? sum/reflen : 0) }')
+
+BREADTH_10X=$(zcat "${OUTDIR}/mosdepth.quantized.bed.gz" | awk -v reflen="$REFERENCE_LENGTH" '
+    $4 == "10:inf" { sum += ($3 - $2) }
+    END { printf "%.6f", (reflen>0 ? sum/reflen : 0) }')
+
+# Median: computed from per-base depth (efficient for pathogen-sized genomes)
+# Note: for sparse metagenomic data, median is often 0 — breadth_1x is more informative
+MEDIAN_DEPTH=$(zcat "${OUTDIR}/mosdepth.per-base.bed.gz" \
+    | awk '{print $4}' \
+    | sort -n \
+    | awk 'BEGIN{c=0} {a[c++]=$1} END{
+        if (c==0) { print 0 }
+        else if (c%2) { print a[int(c/2)] }
+        else { print (a[c/2-1]+a[c/2])/2 }
+    }')
+
+# ── Write coverage metrics ─────────────────────────────────────────────────────
+cat > coverage_metrics.tsv <<EOF
+sample	taxid	extracted_r1_reads	extracted_r2_reads	mapped_reads	reference_length	breadth_1x	breadth_10x	mean_depth	median_depth
+${SAMPLE}	${TAXID}	${EXTRACTED_R1_READS}	${EXTRACTED_R2_READS}	${MAPPED_READS}	${REFERENCE_LENGTH}	${BREADTH_1X}	${BREADTH_10X}	${MEAN_DEPTH}	${MEDIAN_DEPTH}
+EOF
+
+echo "Done."
+date
+echo "Outputs in: $OUTDIR"
+echo "  coverage_metrics.tsv"
+echo "  mosdepth.mosdepth.summary.txt"
+echo "  mosdepth.per-base.bed.gz"
+echo "  mosdepth.quantized.bed.gz"
+echo "  bwa.log"
+
+#(aggregate_results.sh)
+
+#!/bin/bash
+# Aggregate all per-sample/taxid coverage_metrics.tsv files into one table
+# Usage: bash aggregate_results.sh
+#
+# Output: all_coverage_metrics.tsv in the current directory
+
+set -euo pipefail
+
+RESULTS_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_coverage"
+OUTPUT="all_coverage_metrics.tsv"
+
+# Write header from the first file found
+HEADER_WRITTEN=0
+> "$OUTPUT"
+
+for tsv in "${RESULTS_BASE}"/*/*/coverage_metrics.tsv "${RESULTS_BASE}"/*/coverage_metrics.tsv; do
+    [[ -f "$tsv" ]] || continue
+
+    if [[ $HEADER_WRITTEN -eq 0 ]]; then
+        head -1 "$tsv" > "$OUTPUT"
+        HEADER_WRITTEN=1
+    fi
+
+    # Append data rows only (skip header line)
+    tail -n +2 "$tsv" >> "$OUTPUT"
+done
+
+NROWS=$(( $(wc -l < "$OUTPUT") - 1 ))
+echo "Aggregated $NROWS rows into: $OUTPUT"
