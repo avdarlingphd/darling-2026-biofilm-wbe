@@ -1,12 +1,16 @@
 # Parallel Metagenomic Profiling Pipeline
 
-A SLURM-based bash pipeline that runs multiple taxonomic and antimicrobial-resistance (AMR) profilers in series on a single paired-end shotgun metagenomic sample. Designed to be submitted in parallel (one job per sample) by templating the `SAMPLE` variable.
+A SLURM-based bash pipeline that runs read QC plus multiple taxonomic and antimicrobial-resistance (AMR) profilers on paired-end shotgun metagenomic samples. Per-sample SLURM jobs are generated from a single template script and submitted in parallel.
 
 ## Overview
 
-For each sample, the script runs the following tools sequentially within a single SLURM job:
+Two SLURM jobs are run per sample:
 
-1. **Kraken2 + Bracken** — k-mer–based taxonomic classification and abundance re-estimation
+**FastQC job** (`FastQC.sh`): runs FastQC on R1 and R2 independently.
+
+**Main workflow job** (`fullWorkflow.sh`): runs the following tools sequentially within one SLURM job:
+
+1. **Kraken2** — k-mer–based taxonomic classification
 2. **CARD (via DIAMOND blastx)** — antimicrobial resistance gene screening
 3. **Centrifuger** — taxonomic classification (with quantification step)
 4. **Sylph** — containment-based species profiling, with GTDB taxonomy conversion
@@ -16,24 +20,30 @@ Each step is **idempotent**: if the expected output already exists, the step is 
 
 ## Requirements
 
-### SLURM resources (per sample)
+### SLURM resources
+
+Main workflow (per sample):
 - 16 CPU cores
 - 128 GB RAM (Kraken2 PlusPF DB requires ~74 GB)
 - 6 hour wall time
 - Partitions: `hsph`, `sapphire`, `shared`
 
+FastQC (per sample):
+- 1 CPU, 4 GB RAM, 9 hour wall time
+- Partitions: `shared`, `sapphire`
+
 ### Conda environments
 | Environment | Used for |
 |---|---|
+| `/n/netscratch/hhealy_lab/avdarling_conda_envs/fastqc_env` | FastQC |
 | `/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/kraken2_latest` | Kraken2 |
-| `bracken_env` | Bracken |
 | `diamond_env` | CARD (DIAMOND blastx) |
 | `/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/centrifuger_env` | Centrifuger |
 | `/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/sylph_env` | Sylph + sylph-tax |
 | `metaphlan_env` | MetaPhlAn |
 
 ### Reference databases
-- Kraken2/Bracken: `/n/holylabs/hhealy_lab/Lab/databases/kraken2_pluspf`
+- Kraken2: `/n/holylabs/hhealy_lab/Lab/databases/kraken2_pluspf`
 - CARD (DIAMOND): `/n/home11/avdarling/databases/CARD/card_db`
 - Centrifuger: `/n/holylabs/hhealy_lab/Lab/databases/centrifuger_db/cfr_hpv+gbsarscov2`
 - Sylph: `/n/holylabs/hhealy_lab/Lab/databases/gtdb-r220-c200-dbv1.syldb` (taxonomy: `GTDB_r220`)
@@ -45,35 +55,29 @@ Paired-end gzipped FASTQs located under `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip
 - `${SAMPLE}_R1.fastq.gz`
 - `${SAMPLE}_R2.fastq.gz`
 
-The script verifies gzip integrity with `gunzip -t` before proceeding. The `SAMPLE` variable is replaced per job (here templated as `BANANA`) when submitting in parallel.
+Both the FastQC and main workflow scripts verify gzip integrity with `gunzip -t` before running. The `SAMPLE` variable is hard-coded to `BANANA` in the template and replaced per job by the `makeScripts*` generator (see "Parallel submission" below).
 
 ## Output
 
-`${base}` below is the sample name with `_R1.fastq.gz` stripped.
+`${base}` below is the sample name (the `_R1.fastq.gz` suffix stripped from the input filename).
+
+### FastQC
+`/n/netscratch/hhealy_lab/avdarling/fastqc/`
+- `${base}_R1_fastqc.html`, `${base}_R1_fastqc.zip`
+- `${base}_R2_fastqc.html`, `${base}_R2_fastqc.zip`
 
 ### Kraken2
 `/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/`
 - `${base}.kraken2` — per-read classifications
 - `${base}.k2report` — Kraken2 report
 
-Run with `--confidence 0.5` and `--minimum-hit-groups 3`.
-
-### Bracken
-`/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/bracken_output_ct0_5_min_hit_3/`
-- `${base}.bracken_S` — species
-- `${base}.bracken_G` — genus
-- `${base}.bracken_F` — family
-- `${base}.bracken_O` — order
-- `${base}.bracken_C` — class
-- `${base}.bracken_P` — phylum
-
-Run with read length `-r 150` and threshold `-t 10`.
+Run with `--confidence 0.5` and `--minimum-hit-groups 3` (these settings are encoded in the directory name so multiple parameter sweeps can coexist).
 
 ### CARD (DIAMOND blastx)
 `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/CARD_output/`
 - `${base}.card` — DIAMOND tab-separated hits
 
-R1 and R2 are concatenated to a temporary combined FASTQ, aligned with `--max-target-seqs 1 --evalue 1e-10 --id 80`, and the temp file is removed afterward.
+R1 and R2 are concatenated into a temporary combined FASTQ, aligned with `--max-target-seqs 1 --evalue 1e-10 --id 80`, and the temp file is removed afterward.
 
 ### Centrifuger
 `/n/netscratch/hhealy_lab/avdarling/kraken_out/centrifuger_output/`
@@ -95,19 +99,40 @@ R1 and R2 are concatenated to a temporary combined FASTQ, aligned with `--max-ta
 
 ## Logs
 
-SLURM stdout/stderr land in:
-- `/n/home11/avdarling/slurm/%j.kraken_bracken.output`
-- `/n/home11/avdarling/slurm/%j.kraken_bracken.err`
+SLURM stdout/stderr land in `/n/home11/avdarling/slurm/`:
+- Main workflow: `%j.kraken_bracken.output` / `%j.kraken_bracken.err`
+- FastQC: `%j.FastQC.out.output` / `%j.FastQC.out.err`
 
-(`%j` is the SLURM job ID. The log filename is shared across all steps despite the name; consider renaming to something tool-agnostic if helpful.)
+(`%j` is the SLURM job ID.)
 
-## Running in parallel
+## Parallel submission
 
-The script template hard-codes `SAMPLE="BANANA"`; the parallel submission wrapper substitutes the actual sample name into a per-sample copy of the script before `sbatch`-ing it. Each sample gets its own job, its own log files, and writes to disjoint output filenames keyed on `${base}`.
+Per-sample scripts are generated from `BANANA`-templated base scripts and submitted in bulk. Two pairs of helper scripts live in `/n/home11/avdarling/scripts/`:
+
+### Main workflow
+
+- **Template:** `fullWorkflow.sh` — the script described above with `SAMPLE="BANANA"`.
+- **Generator:** `makeScriptsFullWorkflow.sh` — `cd`s into the input directory, finds every `*_R1.fastq.gz`, derives the sample name, and uses `sed 's@BANANA@<sample>@'` to write a per-sample copy of `fullWorkflow.sh` into `/n/home11/avdarling/scripts/workflow_scripts_per_sample/`.
+- **Submitter:** `submitAllScriptsForFullWorkflow.sh` — loops over every `*.sh` in `workflow_scripts_per_sample/` and `sbatch`es it.
+
+### FastQC
+
+- **Template:** `FastQC.sh` — single-sample FastQC script with `SAMPLE="BANANA"`.
+- **Generator:** `makeScriptsforFastQC.sh` — same pattern; finds `*_R1.fastq.gz`, `sed`-substitutes the sample name, and writes per-sample scripts to `/n/home11/avdarling/scripts/FastQCscripts/${sample}.fastqc.sh`.
+- **Submitter:** submitted analogously (`for f in *.sh; do sbatch "$f"; done` from inside `FastQCscripts/`).
+
+### Typical run order
+
+```
+bash makeScriptsforFastQC.sh           # generate per-sample FastQC scripts
+bash submitAllScriptsForFastQC.sh      # (or equivalent) sbatch them
+bash makeScriptsFullWorkflow.sh        # generate per-sample workflow scripts
+bash submitAllScriptsForFullWorkflow.sh
+```
 
 ## Notes & caveats
 
-- All steps after the first depend on the input FASTQs being valid; the early `gunzip -t` check guards against corrupt uploads.
+- All steps depend on the input FASTQs being valid; the early `gunzip -t` check in both templates guards against corrupt uploads.
 - Outputs are split between `holylabs` (persistent project space) and `netscratch` (high-throughput scratch). Anything on netscratch should be copied off before the scratch retention window expires.
 - The CARD step concatenates R1+R2 rather than running them separately; this is fine for translated alignment but means read-pairing information is not preserved in `${base}.card`.
-- Kraken2 confidence and min-hit-groups settings (`0.5` / `3`) are encoded in the output directory name (`ct0_5_min_hit_3`) so multiple parameter sweeps can coexist.
+- The main workflow's SLURM log is named `%j.kraken_bracken.*` for historical reasons even though Bracken is no longer part of the pipeline. Consider renaming to something tool-agnostic.
