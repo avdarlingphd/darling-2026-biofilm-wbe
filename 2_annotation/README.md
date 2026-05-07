@@ -108,8 +108,8 @@ R1 and R2 are concatenated into a temporary combined FASTQ, aligned with `--max-
 ## Logs
 
 SLURM stdout/stderr land in `/n/home11/avdarling/slurm/`:
-- `%j.kraken_bracken.output`
-- `%j.kraken_bracken.err`
+- `%j.fullWorkflow.output`
+- `%j.fullWorkflow.err`
 
 (`%j` is the SLURM job ID.)
 
@@ -133,4 +133,3 @@ bash /n/home11/avdarling/scripts/submitAllScriptsForFullWorkflow.sh
 - All steps depend on the input FASTQs being valid; the early `gunzip -t` check guards against corrupt uploads.
 - Outputs are split between `holylabs` (persistent project space) and `netscratch` (high-throughput scratch). Anything on netscratch should be copied off before the scratch retention window expires.
 - The CARD step concatenates R1+R2 rather than running them separately; this is fine for translated alignment but means read-pairing information is not preserved in `${base}.card`.
-- The SLURM log filename `%j.kraken_bracken.*` is historical — Bracken is no longer part of the pipeline. Consider renaming to something tool-agnostic.
