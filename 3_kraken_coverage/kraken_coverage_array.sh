@@ -10,8 +10,22 @@
 
 set -euo pipefail
 
-# ── Combinations file (one line per sample-taxid pair, tab-separated) ─────────
+# ── Configuration ─────────────────────────────────────────────────────────────
 COMBINATIONS="/n/home11/avdarling/downloadableData/kraken_coverage_combinations_hospital.txt"
+
+KRAKEN_DIR="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3"
+FASTQ_DIR="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs"
+REF_BASE="/n/netscratch/hhealy_lab/avdarling/reference_genomes"
+OUT_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_coverage"
+
+PYTHON="/n/home11/avdarling/miniconda3/bin/python"
+BWA="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/bwa"
+SAMTOOLS="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/samtools"
+MOSDEPTH="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/mosdepth"
+KRAKENTOOLS="/n/home11/avdarling/KrakenTools/extract_kraken_reads.py"
+
+THREADS=8
+# ──────────────────────────────────────────────────────────────────────────────
 
 # Read this task's sample + taxid from the combinations file
 COMBO=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$COMBINATIONS")
@@ -23,23 +37,15 @@ if [[ -z "$SAMPLE" || -z "$TAXID" ]]; then
     exit 1
 fi
 
-# ── Tool paths ─────────────────────────────────────────────────────────────────
-THREADS=8
-PYTHON="/n/home11/avdarling/miniconda3/bin/python"
-BWA="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/bwa"
-SAMTOOLS="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/samtools"
-MOSDEPTH="/n/holylabs/hhealy_lab/Lab/avdarling_conda_envs/bwa_env/bin/mosdepth"
-KRAKENTOOLS="/n/home11/avdarling/KrakenTools/extract_kraken_reads.py"
-
 # ── Input paths ────────────────────────────────────────────────────────────────
-KRAKEN="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/${SAMPLE}.kraken"
-REPORT="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3/${SAMPLE}.kreport"
-R1="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/${SAMPLE}_R1.fastq.gz"
-R2="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs/${SAMPLE}_R2.fastq.gz"
-REF="/n/netscratch/hhealy_lab/avdarling/reference_genomes/taxid_${TAXID}/reference_genome.fna"
+KRAKEN="${KRAKEN_DIR}/${SAMPLE}.kraken"
+REPORT="${KRAKEN_DIR}/${SAMPLE}.kreport"
+R1="${FASTQ_DIR}/${SAMPLE}_R1.fastq.gz"
+R2="${FASTQ_DIR}/${SAMPLE}_R2.fastq.gz"
+REF="${REF_BASE}/taxid_${TAXID}/reference_genome.fna"
 
 # ── Output paths ───────────────────────────────────────────────────────────────
-OUTDIR="/n/netscratch/hhealy_lab/avdarling/kraken_coverage/${SAMPLE}_${TAXID}"
+OUTDIR="${OUT_BASE}/${SAMPLE}_${TAXID}"
 mkdir -p "$OUTDIR"
 
 if [[ -f "${OUTDIR}/coverage_metrics.tsv" ]]; then
@@ -67,8 +73,6 @@ for f in "$PYTHON" "$BWA" "$SAMTOOLS" "$MOSDEPTH" "$KRAKEN" "$REPORT" "$R1" "$R2
     fi
 done
 
-
-
 # ── Extract Kraken-classified reads ───────────────────────────────────────────
 "$PYTHON" "$KRAKENTOOLS" \
     -k "$KRAKEN" \
@@ -80,7 +84,7 @@ done
     --fastq-output \
     -o "$EXTRACT_R1" \
     -o2 "$EXTRACT_R2"
-    
+
 # ── Handle zero-read case ─────────────────────────────────────────────────────
 if [[ ! -s "$EXTRACT_R1" || ! -s "$EXTRACT_R2" ]]; then
     echo "No extracted reads for sample=${SAMPLE}, taxid=${TAXID}" | tee no_reads.txt
@@ -112,10 +116,8 @@ echo "Aligning extracted reads with BWA..."
 
 MAPPED_READS=$("$SAMTOOLS" view -c -F 4 mapped.sorted.bam)
 
-# ── Run mosdepth for coverage metrics ────────────────────────────────────────
-# --no-abbrev       : write full chromosome names
+# ── Run mosdepth for coverage metrics ─────────────────────────────────────────
 # --quantize 0:1:10: : create coverage bands (0x, 1-9x, 10x+) for breadth
-# --threads         : parallel decompression
 echo "Running mosdepth..."
 "$MOSDEPTH" \
     --threads "$THREADS" \
