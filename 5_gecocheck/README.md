@@ -1,5 +1,24 @@
 # GeCoCheck Analysis: YNHH Wastewater RPIP 2024
 
+## Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Project** | Ginkgo RPIP — YNHH Wastewater 2024 |
+| **GeCoCheck version** | v10 |
+| **Samples** | 209 non-municipal wastewater |
+| **Kraken2 kreport type** | `ct0_5_min_hit_3` (confidence=0.5, min hit groups=3) |
+| **Coverage program** | Bowtie2 |
+| **Read limit** | 50,000 (`--read_lim 50000`) |
+| **Processors** | 8 |
+| **Memory** | 100GB |
+| **SLURM partition** | `intermediate` (7-day wall time) |
+| **Genome cache** | `holylabs/.../gcc_genome_cache/` |
+| **Bowtie2 cache** | `holylabs/.../gcc_bowtie2_cache/` |
+| **Cluster** | Harvard FASRC |
+
+---
+
 ## Overview
 
 Genome coverage analysis of wastewater samples collected as part of the Yale New Haven Hospital (YNHH) respiratory pathogen identification project (RPIP) 2024. Sequencing was performed using the Ginkgo RPIP panel. This pipeline uses GeCoCheck (coverage_pipeline.py) to validate pathogen detection by computing bowtie2-based genome coverage metrics for taxa identified by Kraken2.
