@@ -7,12 +7,13 @@ Each job processes ONE sample and ALL its taxids in a single pass over the
 
 Usage:
     python makeScripts_extract.py \
-        --taxid_list /n/home11/avdarling/downloadableData/sample_taxid_list_all_pathogens.tsv \
-        --base_script /n/home11/avdarling/scripts/extract_kraken_base.sh \
-        --outdir /n/home11/avdarling/scripts/extract_scripts
+        --taxid_list sample_taxid_list_all_pathogens.tsv \
+        --base_script extract_kraken_base.sh \
+        --outdir /path/to/extract_scripts \
+        --slurm_logdir /path/to/slurm/logs
 
 Then submit with:
-    bash submitAll_extract.sh
+    bash /path/to/extract_scripts/submitAll_extract.sh
 """
 
 import os
@@ -35,6 +36,10 @@ def main():
     parser.add_argument(
         "--outdir", required=True,
         help="Directory to write generated scripts"
+    )
+    parser.add_argument(
+        "--slurm_logdir", required=True,
+        help="Directory for SLURM .out/.err log files"
     )
     args = parser.parse_args()
 
@@ -62,6 +67,7 @@ def main():
         taxid_array = " ".join(taxids)  # bash array elements: "570 573 562 ..."
         script = template.replace("BANANA_SAMPLE", sample)
         script = script.replace("BANANA_TAXIDS", taxid_array)
+        script = script.replace("BANANA_SLURM_LOGDIR", args.slurm_logdir)
 
         script_path = os.path.join(args.outdir, f"extract_{sample}.sh")
         with open(script_path, "w") as f:
