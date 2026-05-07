@@ -3,16 +3,22 @@
 #SBATCH -t 0-04:00
 #SBATCH -p hsph,shared,sapphire
 #SBATCH --mem=16G
-#SBATCH -o /n/home11/avdarling/slurm/%j.extract_BANANA_SAMPLE.out
-#SBATCH -e /n/home11/avdarling/slurm/%j.extract_BANANA_SAMPLE.err
+#SBATCH -o BANANA_SLURM_LOGDIR/%j.extract_BANANA_SAMPLE.out
+#SBATCH -e BANANA_SLURM_LOGDIR/%j.extract_BANANA_SAMPLE.err
 set -euo pipefail
-source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
-conda activate /n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env
-echo "CONDA_PREFIX=${CONDA_PREFIX}"
-which seqtk
 
-KRAKENTOOLS="/n/home11/avdarling/KrakenTools/extract_kraken_reads.py"
-PYTHON="/n/home11/avdarling/miniconda3/bin/python3"
+# =============================================================================
+# CONFIGURATION — update these paths for your environment
+# =============================================================================
+SEQTK="/path/to/conda_envs/seqtk_env/bin/seqtk"
+KRAKENTOOLS="/path/to/KrakenTools/extract_kraken_reads.py"
+PYTHON="/path/to/miniconda3/bin/python3"     # use base Python, not conda env Python
+KRAKEN_BASE="/path/to/kraken_output/"        # directory with .kraken and .kreport files
+FASTQ_BASE="/path/to/fastqs/"               # directory with paired .fastq.gz files
+OUTBASE="/path/to/blast_validation/"        # root output directory
+SLURM_LOGDIR="/path/to/slurm/logs"          # directory for SLURM .out/.err files
+# =============================================================================
+
 if [ ! -f "${KRAKENTOOLS}" ]; then
     echo "ERROR: extract_kraken_reads.py not found at ${KRAKENTOOLS}"
     exit 1
@@ -21,13 +27,13 @@ if [ ! -f "${PYTHON}" ]; then
     echo "ERROR: base python3 not found at ${PYTHON}"
     exit 1
 fi
+if [ ! -x "${SEQTK}" ]; then
+    echo "ERROR: seqtk not found at ${SEQTK}"
+    exit 1
+fi
 
 SAMPLE="BANANA_SAMPLE"
 TAXIDS=(BANANA_TAXIDS)   # array of taxids for this sample
-
-KRAKEN_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_out/kraken_output_ct0_5_min_hit_3"
-FASTQ_BASE="/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip_fastqs"
-OUTBASE="/n/netscratch/hhealy_lab/avdarling/blast_validation"
 
 KRAKEN_FILE="${KRAKEN_BASE}/${SAMPLE}.kraken"
 KREPORT_FILE="${KRAKEN_BASE}/${SAMPLE}.kreport"
@@ -105,9 +111,9 @@ for TAXID in "${TAXIDS[@]}"; do
 
     # --- Convert FASTQ → FASTA (seqtk is fast for this step) ---
     echo "  Converting R1 to FASTA"
-    seqtk seq -a "${R1_OUT_FASTQ}" > "${R1_OUT_FASTA}"
+    "${SEQTK}" seq -a "${R1_OUT_FASTQ}" > "${R1_OUT_FASTA}"
     echo "  Converting R2 to FASTA"
-    seqtk seq -a "${R2_OUT_FASTQ}" > "${R2_OUT_FASTA}"
+    "${SEQTK}" seq -a "${R2_OUT_FASTQ}" > "${R2_OUT_FASTA}"
 
     echo "  Done: ${OUTDIR}"
 done
