@@ -14,6 +14,30 @@ For each sample, the main workflow job (`fullWorkflow.sh`) runs the following to
 
 Each step is **idempotent**: if the expected output already exists, the step is skipped. This means the script can be safely re-run after partial failures.
 
+## Adapting to your environment
+
+Paths and SLURM settings in this README reflect the original run on the Harvard FASRC Cannon cluster. To run this pipeline elsewhere, replace the following:
+
+| What | This run | Replace with |
+|---|---|---|
+| Input FASTQ dir | `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip` | your input directory |
+| Script dir | `/n/home11/avdarling/scripts/` | wherever you keep your scripts |
+| Per-sample script output | `/n/home11/avdarling/scripts/workflow_scripts_per_sample/` | a directory the generator can write to |
+| SLURM log dir | `/n/home11/avdarling/slurm/` | wherever you want SLURM logs |
+| Kraken2 DB | `/n/holylabs/hhealy_lab/Lab/databases/kraken2_pluspf` | path to a Kraken2 PlusPF (or other) DB |
+| CARD DB | `/n/home11/avdarling/databases/CARD/card_db` | a CARD DIAMOND database |
+| Centrifuger DB | `/n/holylabs/hhealy_lab/Lab/databases/centrifuger_db/cfr_hpv+gbsarscov2` | a Centrifuger index |
+| Sylph DB | `/n/holylabs/hhealy_lab/Lab/databases/gtdb-r220-c200-dbv1.syldb` | a Sylph `.syldb` |
+| Kraken2 output dir | `/n/netscratch/hhealy_lab/avdarling/kraken_out/...` | your scratch/output dir |
+| Centrifuger output dir | `/n/netscratch/hhealy_lab/avdarling/kraken_out/centrifuger_output` | your scratch/output dir |
+| CARD output dir | `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/CARD_output` | your output dir |
+| Sylph output dir | `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/sylph_output` | your output dir |
+| MetaPhlAn output dir | `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/metaphlan_output_parallel_nonanadama_rerun` | your output dir |
+| SLURM partitions | `hsph`, `sapphire`, `shared` | partitions available on your cluster |
+| Conda envs | absolute paths under `/n/holylabs/...` and named envs (`diamond_env`, `metaphlan_env`) | your own conda envs with the appropriate tools installed |
+
+Quick sanity checks: confirm your cluster has enough memory (~128 GB) and wall time (~6 hours) per sample, and that the conda envs listed below contain the tools at the versions you want.
+
 ## Requirements
 
 ### SLURM resources (per sample)
