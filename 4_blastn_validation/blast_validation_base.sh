@@ -1,16 +1,23 @@
 #!/bin/bash
 #SBATCH -c 8
 #SBATCH -t 1-00:00
-#SBATCH -p hsph,shared,sapphire
+#SBATCH -p hsph
 #SBATCH --mem=32G
-#SBATCH -o /n/home11/avdarling/slurm/%j.blast_BANANA_SAMPLE_BANANA_TAXID.out
-#SBATCH -e /n/home11/avdarling/slurm/%j.blast_BANANA_SAMPLE_BANANA_TAXID.err
+#SBATCH -o BANANA_SLURM_LOGDIR/%j.blast_BANANA_SAMPLE_BANANA_TAXID.out
+#SBATCH -e BANANA_SLURM_LOGDIR/%j.blast_BANANA_SAMPLE_BANANA_TAXID.err
 set -euo pipefail
 
-# Use full paths — avoids conda activation issues in non-interactive SLURM shells
-BLASTN="/n/home11/avdarling/conda_envs/blast_env/bin/blastn"
-SEQTK="/n/netscratch/hhealy_lab/avdarling_conda_envs/seqtk_env/bin/seqtk"
-export BLASTDB="/n/netscratch/informatics/Everyone/external_repos/blast/nt/latest/"
+# =============================================================================
+# CONFIGURATION — update these paths for your environment
+# =============================================================================
+BLASTN="/path/to/conda_envs/blast_env/bin/blastn"       # BLAST+ >= 2.10.0 required
+SEQTK="/path/to/conda_envs/seqtk_env/bin/seqtk"
+BLASTDB_DIR="/path/to/blast/nt/latest/"                 # directory containing nt.nal
+OUTBASE="/path/to/blast_validation"                     # root output directory
+SLURM_LOGDIR="/path/to/slurm/logs"                      # directory for SLURM .out/.err files
+# =============================================================================
+
+export BLASTDB="${BLASTDB_DIR}"
 
 # Sanity check: confirm binaries exist
 if [ ! -x "${BLASTN}" ]; then
@@ -24,8 +31,8 @@ fi
 
 SAMPLE="BANANA_SAMPLE"
 TAXID="BANANA_TAXID"
-OUTDIR="/n/netscratch/hhealy_lab/avdarling/blast_validation/blast_validation_${SAMPLE}_${TAXID}"
-DB="/n/netscratch/informatics/Everyone/external_repos/blast/nt/latest/nt"
+OUTDIR="${OUTBASE}/blast_validation_${SAMPLE}_${TAXID}"
+DB="${BLASTDB_DIR}nt"
 R1_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1.fasta"
 R2_FASTA="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R2.fasta"
 R1_FASTA_SUB="${OUTDIR}/${SAMPLE}_taxid_${TAXID}_R1_sub.fasta"
