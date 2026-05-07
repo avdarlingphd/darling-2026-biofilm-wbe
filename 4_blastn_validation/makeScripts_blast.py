@@ -7,12 +7,13 @@ are missing (no reads extracted) or BLAST results already exist.
 
 Usage:
     python makeScripts_blast.py \
-        --taxid_list /n/home11/avdarling/downloadableData/sample_taxid_list_all_pathogens.tsv \
-        --base_script /n/home11/avdarling/scripts/blast_validation_base.sh \
-        --outdir /n/home11/avdarling/scripts/blast_scripts
+        --taxid_list sample_taxid_list_all_pathogens.tsv \
+        --base_script blast_validation_base.sh \
+        --outdir /path/to/blast_scripts \
+        --slurm_logdir /path/to/slurm/logs
 
 Then submit with:
-    bash /n/home11/avdarling/scripts/blast_scripts/submitAll_blast.sh
+    bash /path/to/blast_scripts/submitAll_blast.sh
 """
 
 import os
@@ -34,6 +35,10 @@ def main():
     parser.add_argument(
         "--outdir", required=True,
         help="Directory to write generated scripts"
+    )
+    parser.add_argument(
+        "--slurm_logdir", required=True,
+        help="Directory for SLURM .out/.err log files"
     )
     args = parser.parse_args()
 
@@ -59,6 +64,7 @@ def main():
     for sample, taxid in pairs:
         script = template.replace("BANANA_SAMPLE", sample)
         script = script.replace("BANANA_TAXID", taxid)
+        script = script.replace("BANANA_SLURM_LOGDIR", args.slurm_logdir)
 
         script_path = os.path.join(args.outdir, f"blast_{sample}_{taxid}.sh")
         with open(script_path, "w") as f:
