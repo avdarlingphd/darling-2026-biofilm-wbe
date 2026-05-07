@@ -2,6 +2,30 @@
 
 This pipeline validates Kraken2 taxonomic classifications from paired-end metagenomic wastewater sequencing data by extracting Kraken2-classified reads and BLASTing them against the NCBI nucleotide (nt) database. Each sample/pathogen combination is classified as a true positive, false positive, uncertain, or uncultured-dominant hit.
 
+## Configuration
+
+Before running, update the following paths in the shell script templates to match your environment:
+
+**`extract_kraken_base.sh`**
+```bash
+KRAKENTOOLS="/path/to/KrakenTools/extract_kraken_reads.py"
+PYTHON="/path/to/python3"                          # base Python (not conda env)
+KRAKEN_BASE="/path/to/kraken_output/"             # directory with .kraken and .kreport files
+FASTQ_BASE="/path/to/fastqs/"                     # directory with paired .fastq.gz files
+OUTBASE="/path/to/blast_validation/"              # output root directory
+```
+
+**`blast_validation_base.sh`**
+```bash
+BLASTN="/path/to/conda_envs/blast_env/bin/blastn" # BLAST+ ≥ 2.10.0 required for nt v5
+SEQTK="/path/to/conda_envs/seqtk_env/bin/seqtk"
+BLASTDB="/path/to/blast/nt/latest/"               # directory containing nt.nal
+DB="/path/to/blast/nt/latest/nt"
+OUTBASE="/path/to/blast_validation/"
+```
+
+> **Note:** Use full absolute paths to binaries rather than relying on `conda activate` in SLURM scripts, as conda activation is unreliable in non-interactive shells. Ensure all paths are on filesystems mounted on your compute nodes.
+
 ## Overview
 
 Kraken2 is a fast k-mer-based classifier but can produce false positives, particularly for low-abundance organisms or organisms with shared k-mer content. This pipeline provides orthogonal validation by taking reads that Kraken2 assigned to a target taxon and confirming their identity using BLASTN alignment against the full NCBI nt database.
