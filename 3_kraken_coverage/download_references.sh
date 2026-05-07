@@ -10,19 +10,20 @@
 # Download NCBI reference genomes for all taxids in taxids.txt
 # Usage: sbatch download_references.sh
 # Or interactively: bash download_references.sh
-#
-# Reads taxids from: /n/home11/avdarling/taxids.txt  (one taxid per line)
-# Saves each genome to: /n/netscratch/hhealy_lab/avdarling/reference_genomes/taxid_XXXXX/reference_genome.fna
 
 set -euo pipefail
 
-TAXIDS_FILE="/n/home11/avdarling/downloadableData/new_taxids_to_download.txt"
-REF_BASE="/n/netscratch/hhealy_lab/avdarling/reference_genomes"
+# ── Configuration ─────────────────────────────────────────────────────────────
+TAXIDS_FILE="/n/home11/avdarling/downloadableData/new_taxids_to_download.txt"  # one taxid per line
+REF_BASE="/n/netscratch/hhealy_lab/avdarling/reference_genomes"                # output base directory
+CONDA_SH="/n/home11/avdarling/miniconda3/etc/profile.d/conda.sh"               # path to conda.sh
+CONDA_ENV="/n/netscratch/hhealy_lab/avdarling_conda_envs/kraken2_2.17"         # env with NCBI datasets CLI
+# ──────────────────────────────────────────────────────────────────────────────
 
 # Activate conda to get the datasets CLI
 # (datasets is a compiled binary — works even though Python in this env is broken)
-source /n/home11/avdarling/miniconda3/etc/profile.d/conda.sh
-conda activate /n/netscratch/hhealy_lab/avdarling_conda_envs/kraken2_2.17
+source "$CONDA_SH"
+conda activate "$CONDA_ENV"
 
 if [[ ! -f "$TAXIDS_FILE" ]]; then
     echo "ERROR: taxids file not found: $TAXIDS_FILE" >&2
