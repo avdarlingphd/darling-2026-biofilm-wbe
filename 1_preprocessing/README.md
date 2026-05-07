@@ -12,6 +12,20 @@ For each sample, a per-sample SLURM script is generated from the `BANANA`-templa
 
 The job is **idempotent**: if both `${base}_R1_fastqc.html` and `${base}_R1_fastqc.zip` already exist for a given read, that read is skipped (R1 and R2 are checked independently).
 
+## Adapting to your environment
+
+Paths and SLURM settings in this README reflect the original run on the Harvard FASRC Cannon cluster. To run this elsewhere, replace the following:
+
+| What | This run | Replace with |
+|---|---|---|
+| Input FASTQ dir | `/n/holylabs/hhealy_lab/Lab/ynhh_ww_rpip_2024/Ginkgo_rpip` | your input directory |
+| Output dir | `/n/netscratch/hhealy_lab/avdarling/fastqc` | your output directory |
+| Conda env | `/n/netscratch/hhealy_lab/avdarling_conda_envs/fastqc_env` | a conda env with `fastqc` installed |
+| Script dir | `/n/home11/avdarling/scripts/` | wherever you keep your scripts |
+| Per-sample script output | `/n/home11/avdarling/scripts/FastQCscripts/` | a directory the generator can write to |
+| SLURM log dir | `/n/home11/avdarling/slurm/` | wherever you want SLURM logs |
+| SLURM partitions | `shared`, `sapphire` | partitions available on your cluster |
+
 ## Requirements
 
 ### SLURM resources (per sample)
