@@ -1,13 +1,13 @@
 #!/bin/bash
 # Aggregate all per-sample/taxid coverage_metrics.tsv files into one table
 # Usage: bash aggregate_results.sh
-#
-# Output: all_coverage_metrics.tsv in the current directory
 
 set -euo pipefail
 
-RESULTS_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_coverage"
-OUTPUT="all_coverage_metrics.tsv"
+# ── Configuration ─────────────────────────────────────────────────────────────
+RESULTS_BASE="/n/netscratch/hhealy_lab/avdarling/kraken_coverage"  # base dir containing all SAMPLE_TAXID/ folders
+OUTPUT="all_coverage_metrics.tsv"                                   # output filename
+# ──────────────────────────────────────────────────────────────────────────────
 
 # Write header from the first file found
 HEADER_WRITTEN=0
