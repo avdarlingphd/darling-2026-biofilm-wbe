@@ -6,7 +6,7 @@
 |-----------|-------|
 | **Project** | Ginkgo RPIP — YNHH Wastewater 2024 |
 | **GeCoCheck version** | v10 |
-| **Samples** | 209 non-municipal wastewater |
+| **Samples** | 209 sink biofilm, sewer biofilm, and wastewater (hybridization-based probe-capture enrichment metagenomic sequencing) |
 | **Kraken2 kreport type** | `ct0_5_min_hit_3` (confidence=0.5, min hit groups=3) |
 | **Coverage program** | Bowtie2 |
 | **Read limit** | 50,000 (`--read_lim 50000`) |
@@ -28,7 +28,7 @@ Genome coverage analysis of wastewater samples collected as part of the Yale New
 ## Samples
 
 - **Total sequenced**: 250 samples
-- **Non-municipal wastewater** (used for coverage analysis): 209 samples
+- **Sink biofilm, sewer biofilm, and wastewater** (used for coverage analysis): 209 samples
 - **Municipal wastewater** (excluded): 41 samples
 - Sample IDs follow the format `GKWWBAA#####`
 - Raw paired-end FASTQs (R1/R2) located in: `Ginkgo_rpip_fastqs/`
@@ -45,7 +45,7 @@ Reads were classified using Kraken2 with the following parameters:
 - Output directory: `kraken_output_ct0_5_min_hit_3/`
 
 ### Genome Coverage (GeCoCheck v10)
-GeCoCheck was run on the 209 non-municipal samples using Kraken2 kreport files as input for taxon nomination. Key parameters:
+GeCoCheck was run on the 209 sink biofilm, sewer biofilm, and wastewater samples using Kraken2 kreport files as input for taxon nomination. Key parameters:
 
 ```bash
 coverage_pipeline.py \
@@ -99,6 +99,6 @@ SLURM resources: 8 cores, 100GB RAM, 7-day wall time, `intermediate` partition.
 
 ## Notes
 
-- GeCoCheck was previously run on all 250 samples (v8) using `ct0_5` kreports; v10 restricts to non-municipal samples and uses the more stringent `ct0_5_min_hit_3` kreports.
+- GeCoCheck was previously run on all 250 samples (v8) using `ct0_5` kreports; v10 restricts to sink biofilm, sewer biofilm, and wastewater samples and uses the more stringent `ct0_5_min_hit_3` kreports.
 - Genome and bowtie2 caches from v8 were retained and reused in v10 to avoid redundant downloads.
 - Pipeline run on Harvard FASRC cluster (netscratch for intermediate files, holylabs for long-term storage).
