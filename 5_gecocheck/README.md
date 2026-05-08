@@ -86,29 +86,6 @@ SLURM resources: 8 cores, 100GB RAM, 7-day wall time, `intermediate` partition.
 
 ---
 
-## Results Summary
-
-### Coverage-Validated Detections
-GeCoCheck processed **~60 taxa** that met the read threshold across 209 non-municipal samples. Coverage metrics reported include mean bowtie2 depth, genome fraction, and mean mapping quality per taxon per sample.
-
-### Target Pathogens Not Processed by GeCoCheck
-Several target pathogens of interest were detected by Bracken but were absent from the GeCoCheck output. This is expected behavior: GeCoCheck nominates taxa for genome download based on **direct Kraken2 kreport read counts**, not Bracken-redistributed estimates. The following pathogens had insufficient direct Kraken2 reads to clear the pipeline's read threshold:
-
-| Pathogen | Median Direct Kraken Reads | Bracken Inflation Factor |
-|---|---|---|
-| *Stenotrophomonas maltophilia* | 115 | ~31× |
-| *Aeromonas hydrophila* | 1,315 | ~34× |
-| *Citrobacter freundii* | 647 | ~37× |
-| *Vibrio cholerae* | 14 | ~263× |
-| *Naegleria fowleri* | 24 | ~184× |
-| *Mycobacterium avium* | 29 | ~2003× |
-| *Mycobacterium tuberculosis* | 43 | ~521× |
-| *Burkholderia mallei* | 32 | ~176× |
-
-Bracken inflates read counts by redistributing genus-level reads probabilistically to the species level. These inflated estimates do not reflect direct sequencing evidence and cannot substitute for the kreport-based threshold used by GeCoCheck.
-
----
-
 ## Scripts
 
 | Script | Purpose |
