@@ -33,8 +33,40 @@ library(showtext)
 library(tidytext)
 library(ggtext)
 library(RColorBrewer)
-```
 
+#BiocManager::install("decontam")
+#BiocManager::install("DESeq2")
+#BiocManager::install("genefilter")
+#BiocManager::install("phyloseq")
+#install.packages("permute")
+#install.packages("vegan")
+#install.packages("viridis")
+#install.packages("patchwork")
+#install.packages("ComplexUpset")
+#install.packages("ggupset")
+#install.packages("ggstatsplot")
+#install.packages("ggtext")
+#install.packages("forcats")
+#install.packages("ggsignif")
+library(ggsignif)
+library(forcats)
+library(ggtext)
+library(ggstatsplot)
+library(ggupset)
+library(ComplexUpset)
+library(phyloseq); packageVersion("phyloseq")
+library(Biostrings); packageVersion("Biostrings")
+library(genefilter)
+library(vegan); packageVersion("vegan")
+library(DESeq2); packageVersion("DESeq2")
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(tidyverse)
+library(viridis)
+library(patchwork)
+#theme_set(theme_bw())
+```
 #INSTALL FUNCTION FROM GITHUB
 ```{r eval=FALSE, include=FALSE}
 Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS"=TRUE)
@@ -423,41 +455,6 @@ check_counts_metadata = metadata_df %>%
 
 #Merge data
 ```{r}
-# Merge datasets based on the 'Sample_ID' column
-bracken_merged_df <- full_join(bracken_df, metadata_df, by = 'SampleID') %>% 
-  distinct() %>% 
-  ungroup() 
-
-# high_abun_species = bracken_merged_df %>% 
-#   
-#   group_by(name) %>% 
-#   summarise(fraction_total_reads = mean(fraction_total_reads,na.rm = T)) %>% 
-#   ungroup() %>% 
-#   
-#   #filter out species at low abundance that counting above a specific relativea abundance as true detects
-#   filter(fraction_total_reads>0.0001) %>% 
-#   
-#   dplyr::select(name) %>% distinct() %>% pull()
-#   
-#   
-# bracken_merged_df <- bracken_merged_df %>% 
-#   filter(name %in% high_abun_species)
-
-
-check_counts_merged = bracken_merged_df %>% 
-  
-  filter(Type %in% c("Endcap", "H_WW","Drain")) %>% 
-  
-  dplyr::select("SampleID") %>% distinct()
-
-#export species level dataframe-------------
-
-species_df = bracken_merged_df %>% 
-  
-  filter(taxonomy_lvl == "S")
-
-library(writexl)
-write_xlsx(species_df,"Input Data/Species_Bracken_output.xlsx")
 
 #get kracken_merged_df ----------------
 kraken_merged_df <- left_join(kraken_rel_ab, metadata_df, by = 'SampleID') %>% 
@@ -1075,7 +1072,7 @@ print(only_in_B)
 rpip_pathogen_species_list= rpip_pathogen_species_list_kraken_nomenclature_old_version
 
 
-taxa_detected = bracken_merged_df %>% dplyr::distinct(name) %>% pull(name)
+#taxa_detected = kraken_merged_df %>% dplyr::distinct(name) %>% pull(name)
 
 # taxa_detected[1:999]
 # taxa_detected[1000:1999]
@@ -1338,11 +1335,11 @@ detected_pathogens =# R-compatible vector of pathogen species from the provided 
 
 #---------Look at differences between total detected species and RPIP pathogens by detection frequency------------------
 #get unique list of total detected at species level
-detected_species = bracken_merged_df %>% filter(taxonomy_lvl== "S") %>% distinct(name) %>% pull(name)
+detected_species = kraken_merged_df %>% filter(taxonomy_lvl== "S") %>% distinct(name) %>% pull(name)
 
 
 #
-detection_frequency_df = bracken_merged_df %>% 
+detection_frequency_df = kraken_merged_df %>% 
   filter(name %in% c(detected_species,rpip_pathogen_species_list)) %>% 
   mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
   filter(rel_ab>0) %>% 
@@ -1352,7 +1349,7 @@ detection_frequency_df = bracken_merged_df %>%
   # Note: If some SampleIDs are missing entirely, use: 
   # complete(SampleID = unique(bracken_merged_df$SampleID), name, fill = list(rel_ab = 0))
   #complete(SampleID, name, fill = list(rel_ab = 0)) %>%
-  complete(SampleID = unique(bracken_merged_df$SampleID), name, fill = list(rel_ab = 0)) %>% 
+  complete(SampleID = unique(kraken_merged_df$SampleID), name, fill = list(rel_ab = 0)) %>% 
   
   #calculate detection frequency across all samples
   group_by(name) %>% 
@@ -1377,7 +1374,7 @@ print(plot)
 
 #---------Look at differences in RPIP and non RPIP pathogens by detection frequency-------
 
-detection_frequency_df = bracken_merged_df %>% 
+detection_frequency_df = kraken_merged_df %>% 
   filter(name %in% c(detected_pathogens,rpip_pathogen_species_list)) %>% 
   mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
   filter(rel_ab>0) %>% 
@@ -1411,7 +1408,7 @@ print(plot)
 
 #---------Look at differences in RPIP and non RPIP pathogens by rel abundance-------
 
-mean_rel_ab_df = bracken_merged_df %>% 
+mean_rel_ab_df = kraken_merged_df %>% 
   filter(name %in% c(detected_pathogens,rpip_pathogen_species_list)) %>% 
   mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
   filter(rel_ab>0) %>% 
@@ -1451,7 +1448,7 @@ print(plot)
 
 #---------Look at differences in RPIP and non RPIP pathogens by rel abundance-------
 
-mean_rel_ab_df = bracken_merged_df %>% 
+mean_rel_ab_df = kraken_merged_df %>% 
   filter(name %in% c(detected_pathogens,rpip_pathogen_species_list)) %>% 
   mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
   filter(rel_ab>0) %>% 
@@ -1466,7 +1463,7 @@ mean_rel_ab_df = bracken_merged_df %>%
   mutate(mean_rel_ab = mean(rel_ab,na.rm = TRUE)) %>% 
   ungroup() %>% 
   
-  filter(mean_rel_ab > 0.005)
+  filter(mean_rel_ab > 0.0001)
   
 
 plot = mean_rel_ab_df %>% 
@@ -1494,7 +1491,7 @@ print(plot)
 #------Sum rel ab of all RPIP pathogens and multiply total reads per sample and that would be total reads for (stacked bar plot)------------
 
 #--------Stacked bar plot of assinged reads to RPIP vs not------------
-stacked_bar_df = bracken_merged_df %>% 
+stacked_bar_df = kraken_merged_df %>% 
   filter(name %in% c(detected_species,rpip_pathogen_species_list)) %>% 
   mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
   distinct(SampleID, name,rel_ab) %>% 
@@ -1553,13 +1550,6 @@ rpip_pathogen_species_list_additional= c(rpip_pathogen_species_list_kraken_nomen
 
 #Make Spreadsheet with filtered kraken output for only relevant pathogens for BLASTing
 ```{r}
-#use bracken or kraken
-spreadsheet_to_blast = bracken_df %>% 
-  
-  filter(name %in% rpip_pathogen_species_list) 
-
-
-write_xlsx(spreadsheet_to_blast,"Output Spreadsheets/bracken_sample_taxid_list_fixed.xlsx")
 
 spreadsheet_to_blast = kraken_rel_ab %>% 
   
@@ -1576,11 +1566,6 @@ taxids_total = spreadsheet_to_blast %>%
 
 #REMOVE BLASTED FALSE POSITIVES
 ```{r}
-bracken_merged_df_filtered  = bracken_merged_df %>% 
-  
-  full_join(blast_report_df,by = c("SampleID", "taxonomy_id","name")) %>% 
-  
-  drop_na(fraction_total_reads)# %>%  filter(is.na(classification) | !classification %in% c("FALSE_POSITIVE","UNCERTAIN"))
 
 kraken_merged_df_filtered  = kraken_merged_df %>% full_join(blast_report_df,by = c("SampleID", "taxonomy_id","name")) 
   
@@ -2123,367 +2108,6 @@ filtered_dates <- analysis_df %>%
 ```
 
 #NMDS and PERMANOVA
-##Microbiome NMDS only on samples with species-level call
-```{r}
-
-
-
-
-metadata = metadata_df %>%
-  column_to_rownames(var = "SampleID")
-
-# 1) Extract species-level rows (where clade_name contains "s__" OR length of pipe-split >=7)
-genus_df <- bracken_df %>%
-  filter(taxonomy_lvl== "S") %>%
-  mutate(rel_ab = as.numeric(fraction_total_reads))
-
-
-
-# make dataframe with a column per sample and values are rpkm
-transposed = genus_df %>% dplyr::select(SampleID,name,rel_ab) %>% 
-  
-  #as numeric
-  mutate(rel_ab = as.numeric(rel_ab)) %>% 
-  
-  group_by(SampleID, name) %>% 
-  summarize(rel_ab = sum(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  ungroup() %>% 
-  
-  pivot_wider(
-    names_from = SampleID,   # new column names come from sample_id
-    values_from = rel_ab        # values in cells come from rpkm
-  ) %>% 
-  
-  #replace NAs with zeros
-  mutate_all( ~replace(., lengths(.)==0, 0)) 
-
-
-#store data in counts variable and only show fraction reads 
-counts = transposed %>% dplyr::select(-name) %>% t() 
-
-# Extract row names as a separate vector
-row_names <- rownames(counts)
-
-
-#remove samples
-#counts <- counts[!(rownames(counts) %in% c("S209", "S210","S1","S2","S3")), ]
-
-#make sure it's a numeric dataframe
-counts = as.data.frame(counts) %>% mutate(across(everything(), ~ as.numeric(as.character(.))))
-
-#replace NAs with zero
-counts[is.na(counts)] = 0
-                       
-# If too few samples remain, think twice
-cat("Samples with species-level data:", nrow(counts), "\n")   
-
-# Optional taxon filtering: remove very rare species
-min_prevalence <- 0.05  # species present in >=5% samples
-present_in <- colSums(counts > 0)
-keep_taxa <- present_in >= (min_prevalence * nrow(counts))
-comm_sp_filt <- counts[, keep_taxa, drop = FALSE]
-
-# Hellinger transform (recommended for species abundance)
-comm_sp_hell <- decostand(comm_sp_filt, method = "hellinger")
-
-#get the distance matrix
-dist1 <- vegdist(counts,method = "bray")
-#dist1 = vegdist(comm_sp_hell, method = "bray") # if we want Hellinger transformation and removal of rare species
-argMDS <- isoMDS(dist1, trace = F)
-scores <- as.data.frame(argMDS)
-scores <- scores[,1:2]
-
-# Assuming 'scores' and 'metadata' are your dataframes
-common_rows <- intersect(rownames(counts), rownames(metadata))
-
-# Filter 'scores' dataframe to keep only rows present in 'metadata'
-filtered_counts <- counts[rownames(counts) %in% common_rows, ]
-
-
-# Filter 'scores' dataframe to keep only rows present in 'metadata'
-filtered_metadata <- metadata[rownames(metadata) %in% common_rows, ]
-
-
-
-# meta MDS and create envfit variable
-vare.mds <- metaMDS(filtered_counts, trace = FALSE, distance = "bray")
-#library(vegan)
-ef <- envfit(vare.mds, filtered_metadata, permu = 999,na.rm = TRUE)
-
-
-#plot results
-plot(vare.mds, display = "sites")
-
-
-#extract envfit arrows data and filter out non significant one 
-#en_coord_cont = as.data.frame(scores(ef, "vectors")) * ordiArrowMul(ef) 
-#en_coord_cont$pval <- ef[["vectors"]][["pvals"]]
-#en_coord_cont <- filter(en_coord_cont,pval<=0.10)
-
-#extract nmds scores and associate to metadata 
-nmds_scores <- as.data.frame(scores(vare.mds)$sites)
-
-# Assuming your_data is your dataframe
-nmds_scores$SampleID <- rownames(nmds_scores)
-rownames(nmds_scores) <- NULL # now get rid of row names
-
-full_metadata = metadata %>% rownames_to_column(var = "SampleID") %>% 
-  
-  #create new variable combined with site and sample type
-  mutate("site_type"=paste0(Location,"_",Type))
-
-nmdsMerged = left_join(nmds_scores,full_metadata, by = "SampleID") %>% 
-  
-    # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5")) 
-
-
-
-
-nmds_plotg <- nmdsMerged %>% 
-  
-  #filter locations if needed
-  #filter(Location %in% locations) %>% 
-  ggplot(aes(x = NMDS1, y = NMDS2, color = site_type)) +
-  geom_point() +
-  stat_ellipse(linewidth = 0.75) +
-  
-  #change colors
-  #scale_color_manual(values = c(
-    #"4" = "lightsalmon", "12" = "grey",
-   #                             )) +
-  #scale_shape_manual(values = c(1, 2
-                                #, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21,22, 29
-                                #)) +
-  theme_bw() +
-  labs(
-    title = "NMDS Plot",
-    x = "NMDS1",
-    y = "NMDS2",
-    color = "site_type",
-    size = "Collection Date"
-  ) + 
-  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
-  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
-  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
-  theme(axis.text.y = element_text(angle = 45, hjust = 1)) + theme(axis.text.y = element_blank())
-
-# print plot
-nmds_plotg
-
-#prettier NMDS plot with shapes and colors
-nmds_plotg <- nmdsMerged %>% 
-  
-  #filter out municipal ww
-  filter(Type != "Mu_WW") %>% 
-  
-  #rename some variables
-  mutate(Type = case_when(Type == "Mu_WW"~ "Municipal WW",
-                          Type == "H_WW" ~ "Hospital WW",
-                          .default = Type)) %>% 
-  
-  #filter locations if needed
-  #filter(Location %in% locations) %>% 
-  ggplot(aes(x = NMDS1, y = NMDS2, color = Type, shape = Location, group = Type)) +
-  geom_point() +
-  stat_ellipse(linewidth = 0.75) +
-  
-  #change colors
-  #scale_color_manual(values = c(
-    #"4" = "lightsalmon", "12" = "grey",
-   #                             )) +
-  #scale_shape_manual(values = c(1, 2
-                                #, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21,22, 29
-                                #)) +
-  theme_bw() +
-  labs(
-    title = "NMDS Plot",
-    x = "NMDS1",
-    y = "NMDS2",
-    color = "site_type",
-    size = "Collection Date"
-  ) + 
-  
-  #manualy change colors
-  scale_color_manual(values = c("Drain" = resistome_colors[[1]], "Endcap" = resistome_colors[[2]], 
-                                "Municipal WW" = resistome_colors[[3]], 
-                                "Hospital WW" = resistome_colors[[4]]
-                                )) +
-  #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
-  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
-  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
-  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
-  labs(title = "",
-       color = "",
-       shape = "") +
-  theme(axis.text.y = element_text(angle = 45, hjust = 1)) + theme(axis.text.y = element_blank())
-
-# print plot
-nmds_plotg
-
-# Save the combined plot as a PNG file
-ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "Kraken2 CT 0.5 Based Microbiome NMDS (Species level) by Site and Location.png", dpi = 300, height = 6, width = 7, units = "in")
-
-#prettier NMDS plot with shapes and colors
-nmds_plotg <- nmdsMerged %>% 
-  
-  #filter out municipal ww
-  filter(Type != "Mu_WW") %>% 
-  
-  #rename some variables
-  mutate(Type = case_when(Type == "Mu_WW"~ "Municipal WW",
-                          Type == "Endcap" ~ "Branch Biofilm",
-                          Type == "Drain" ~ "Sink Biofilm",
-                          Type == "H_WW" ~ "Hospital WW",
-                          .default = Type)) %>% 
-  
-  #filter locations if needed
-  #filter(Location %in% locations) %>% 
-  ggplot(aes(x = NMDS1, y = NMDS2, color = Type, shape = Location, group = Type)) +
-  geom_point() +
-  stat_ellipse(linewidth = 0.75) +
-  
-  #change colors
-  #scale_color_manual(values = c(
-    #"4" = "lightsalmon", "12" = "grey",
-   #                             )) +
-  #scale_shape_manual(values = c(1, 2
-                                #, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21,22, 29
-                                #)) +
-  theme_bw() +
-  labs(
-    title = "NMDS Plot",
-    x = "NMDS1",
-    y = "NMDS2",
-    color = "site_type",
-    size = "Collection Date"
-  ) + 
-  
-  #manualy change colors
-  scale_color_manual(values = c("Sink Biofilm" = "#79307D", "Branch Biofilm" = "#417C8C", 
-                                "Municipal WW" = resistome_colors[[3]], 
-                                "Hospital WW" = "#E57262"
-                                )) +
-  #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
-  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
-  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
-  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
-  labs(title = "Kraken2 NMDS Analysis",
-       color = "",
-       shape = "") +
-  theme(axis.text.y = element_text(angle = 45, hjust = 1)) + 
-  theme(axis.text.y = element_blank(),
-        axis.title = element_text(size= 20,face = "bold",color = "black"),
-        legend.text = element_text(size = 15,face = "bold", color = "black"))
-
-# print plot
-nmds_plotg
-
-# Save the combined plot as a PNG file
-ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "Kraken2 CT 0.5- Microbiome Bracken derived NMDS (species level) by Site and Location.png", dpi = 300, height = 5, width = 7.5, units = "in")
-
-ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "Kraken2 CT 0.5- Microbiome Bracken derived NMDS (species level) by Site and Location.svg", height = 6, width = 7)
-
-
-```
-
-
-
-## Run permanova on NMDS Microbiome
-```{r}
-
-#specify subareas we want to incude
-locations = c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
-
-# Find the row indices where "Influent" or "Septic" appear in the "subarea" column
-rows <- which(filtered_metadata[, 1] %in% locations)
-
-# Subset the matrix based on the selected rows (so filtering for specific sites)
-subset_metadata <- filtered_metadata[rows, ] %>% 
-  
-  #create new variable combined with site and sample type
-  mutate("site_type"=paste0(Location,"_",Type))
-
-# Get row names that are present in both data frames
-common_rows <- intersect(rownames(subset_metadata), rownames(filtered_counts))
-
-subset_adonis = filtered_counts[common_rows,]
-
-  
-
-adonis2(subset_adonis ~ Location + Type , subset_metadata, permutations = 9999, by = "margin")
-
-
-# Run PERMANOVA
-res <- adonis2(subset_adonis ~ Location * Type, subset_metadata,
-               permutations = 9999, by = "terms")
-
-# Convert to data frame
-res_df <- as.data.frame(res) %>% 
-  # Add a column for term names
-  mutate(Term = rownames(res),
-         # Replace very small p-values with <0.0001 for readability
-         `p-value` = ifelse(`Pr(>F)` < 0.0001, "<0.0001", `Pr(>F)`),
-         # Round numeric columns nicely
-         R2 = round(R2, 4),
-         F = round(F, 3),
-         SumOfSqs = round(SumOfSqs, 3)) %>%
-  # Select and reorder columns
-  dplyr::select(Term, Df, SumOfSqs, R2, F, `p-value`)
-
-# View the data frame
-res_df
-
-
-library(dplyr)
-library(ggplot2)
-library(scales)
-
-df_plot <- res_df %>%
-  filter(Term != "Total") %>%        # remove Total row
-  mutate(Percent = R2)     %>%           # R2 already proportions
-  mutate(Term = case_when(Term == "Residual" ~ "Unknown",
-                          .default = Term))
-
-df_plot$Term <- factor(df_plot$Term,
-                       levels = c("Location", "Type", "Location:Type", "Unknown"))
-
-
-plot = ggplot(df_plot, aes(x = "Explained Variation", y = Percent, fill = Term)) +
-  geom_bar(stat = "identity") +
-  scale_y_continuous(labels = percent_format()) +
-  labs(x = NULL,
-       y = "Explained Variation (%)") +
-  theme_classic()
-
-
-# Save with ggsave
-ggsave("Biofilm Project Figures/Kraken CT 0.5 All microbiome all dates Explained Permanova Variation.svg", plot = plot, width = 4, height = 6)
-
-# Save with ggsave
-ggsave("Biofilm Project Figures/Kraken CT 0.5 All microbiome all dates Explained Permanova Variation.png", plot = plot, width = 4, height = 6,dpi = 300)
-
-
-
-
-#run pairwise adonis using function
-pairwise_adonis_microbiome = pairwise.adonis2(subset_adonis, subset_metadata$Location, sim.method = 'bray', p.adjust.m = 'bonferroni')
-
-#adonis.pair(vegdist(subset_adonis),subset_metadata$subarea)
-
-
-#run pairwise adonis using function
-pairwise_adonis_microbiome = pairwise.adonis2(subset_adonis, subset_metadata$Type, sim.method = 'bray', p.adjust.m = 'bonferroni')
-
-#adonis.pair(vegdist(subset_adonis),subset_metadata$subarea)
-
-```
-
-
 ##Microbiome NMDS only on samples with species-level call-RPIP PATHOGENS ONLY-ONLY SHARED DATES WITH BIOFILM
 ```{r}
 #specify dates
@@ -2738,7 +2362,7 @@ nmds_plotg <- nmdsMerged %>%
   
   #manualy change colors
   scale_color_manual(values = c("Sink Biofilm" = "#79307D", "Branch Biofilm" = "#417C8C", 
-                                "Municipal WW" = resistome_colors[[3]], 
+                                "Municipal WW" = fortyfive_pal[[3]], 
                                 "Wastewater" = "#E57262"
                                 )) +
   #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
@@ -2764,281 +2388,6 @@ ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "Kraken2 CT 0.5- Mic
 
 ```
 
-
-
-##Microbiome NMDS only on samples with species-level call-ONLY SHARED DATES WITH BIOFILM
-```{r}
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-
-
-analysis_df <- kraken_merged_df_filtered %>%
-  filter(
-    taxonomy_lvl == "S",
-    Location %in% locations,
-    Type %in% c("Drain", "Endcap", "H_WW"),
-     (Type == "H_WW" & Date %in% dates) | (Type != "H_WW")
-  ) %>%
-  mutate(
-    rel_ab = as.numeric(fraction_total_reads),
-    Date   = as.Date(Date),
-    Type   = factor(Type, levels = c("Drain", "Endcap", "H_WW"))
-  ) %>%
-  left_join(
-    sixteens_df,
-    by = c("Type", "Location", "Date")
-  ) %>%
-  drop_na(timepoint)
-
-
-biofilm_dates <- analysis_df %>%
-  filter(Type %in% c("Endcap")) %>% 
-  group_by(Location, timepoint) %>%
-  summarise(
-    biofilm_ref_date = Date,
-    .groups = "drop"
-  ) %>% distinct()
-
-filtered_df <- analysis_df %>%
-  mutate(Date = as.Date(Date)) %>%
-  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
-
-  mutate(
-    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
-  ) %>% 
-
-  #match temporal subsampling
-  group_by(Location, timepoint, Type) %>%
-  mutate(
-    best_date = min(date_diff_days)
-  ) %>%
-  ungroup() %>% 
-
-  filter(
-    (best_date == date_diff_days)
-  ) %>% 
-  
-  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
-
-metadata = filtered_df %>%
-  
-  #filter dates
-  dplyr::select(SampleID,Location,Type,Month,Date) %>% distinct() %>% 
-  
-  
-  column_to_rownames(var = "SampleID")
-
-# 1) Extract species-level rows (where clade_name contains "s__" OR length of pipe-split >=7)
-genus_df <- filtered_df 
-
-
-
-
-# make dataframe with a column per sample and values are rpkm
-transposed = genus_df %>% dplyr::select(SampleID,name,rel_ab) %>% 
-  
-  #as numeric
-  mutate(rel_ab = as.numeric(rel_ab)) %>% 
-  
-  group_by(SampleID, name) %>% 
-  summarize(rel_ab = sum(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  ungroup() %>% 
-  
-  pivot_wider(
-    names_from = SampleID,   # new column names come from sample_id
-    values_from = rel_ab        # values in cells come from rpkm
-  ) %>% 
-  
-  #replace NAs with zeros
-  mutate_all( ~replace(., lengths(.)==0, 0)) 
-
-
-#store data in counts variable and only show fraction reads 
-counts = transposed %>% dplyr::select(-name) %>% t() 
-
-# Extract row names as a separate vector
-row_names <- rownames(counts)
-
-
-#remove samples
-#counts <- counts[!(rownames(counts) %in% c("S209", "S210","S1","S2","S3")), ]
-
-#make sure it's a numeric dataframe
-counts = as.data.frame(counts) %>% mutate(across(everything(), ~ as.numeric(as.character(.))))
-
-#replace NAs with zero
-counts[is.na(counts)] = 0
-                       
-# If too few samples remain, think twice
-cat("Samples with species-level data:", nrow(counts), "\n")   
-
-# Optional taxon filtering: remove very rare species
-min_prevalence <- 0.05  # species present in >=5% samples
-present_in <- colSums(counts > 0)
-keep_taxa <- present_in >= (min_prevalence * nrow(counts))
-comm_sp_filt <- counts[, keep_taxa, drop = FALSE]
-
-# Hellinger transform (recommended for species abundance)
-comm_sp_hell <- decostand(comm_sp_filt, method = "hellinger")
-
-#get the distance matrix
-dist1 <- vegdist(counts,method = "bray")
-#dist1 = vegdist(comm_sp_hell, method = "bray") # if we want Hellinger transformation and removal of rare species
-argMDS <- isoMDS(dist1, trace = F)
-scores <- as.data.frame(argMDS)
-scores <- scores[,1:2]
-
-# Assuming 'scores' and 'metadata' are your dataframes
-common_rows <- intersect(rownames(counts), rownames(metadata))
-
-# Filter 'scores' dataframe to keep only rows present in 'metadata'
-filtered_counts <- counts[rownames(counts) %in% common_rows, ]
-
-
-# Filter 'scores' dataframe to keep only rows present in 'metadata'
-filtered_metadata <- metadata[rownames(metadata) %in% common_rows, ]
-
-
-
-# meta MDS and create envfit variable
-vare.mds <- metaMDS(filtered_counts, trace = FALSE, distance = "bray")
-#library(vegan)
-ef <- envfit(vare.mds, filtered_metadata, permu = 999,na.rm = TRUE)
-
-
-#plot results
-plot(vare.mds, display = "sites")
-
-
-#extract envfit arrows data and filter out non significant one 
-#en_coord_cont = as.data.frame(scores(ef, "vectors")) * ordiArrowMul(ef) 
-#en_coord_cont$pval <- ef[["vectors"]][["pvals"]]
-#en_coord_cont <- filter(en_coord_cont,pval<=0.10)
-
-#extract nmds scores and associate to metadata 
-nmds_scores <- as.data.frame(scores(vare.mds)$sites)
-
-# Assuming your_data is your dataframe
-nmds_scores$SampleID <- rownames(nmds_scores)
-rownames(nmds_scores) <- NULL # now get rid of row names
-
-full_metadata = metadata %>% rownames_to_column(var = "SampleID") %>% 
-  
-  #create new variable combined with site and sample type
-  mutate("site_type"=paste0(Location,"_",Type))
-
-nmdsMerged = left_join(nmds_scores,full_metadata, by = "SampleID") 
-
-
-#specify subareas we want to incude in plot
-locations = c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
-
-
-nmds_plotg <- nmdsMerged %>% 
-  
-  #filter locations if needed
-  #filter(Location %in% locations) %>% 
-  ggplot(aes(x = NMDS1, y = NMDS2, color = site_type)) +
-  geom_point() +
-  stat_ellipse(linewidth = 0.75) +
-  
-  #change colors
-  #scale_color_manual(values = c(
-    #"4" = "lightsalmon", "12" = "grey",
-   #                             )) +
-  #scale_shape_manual(values = c(1, 2
-                                #, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21,22, 29
-                                #)) +
-  theme_bw() +
-  labs(
-    title = "NMDS Plot",
-    x = "NMDS1",
-    y = "NMDS2",
-    color = "site_type",
-    size = "Collection Date"
-  ) + 
-  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
-  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
-  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
-  theme(axis.text.y = element_text(angle = 45, hjust = 1)) + theme(axis.text.y = element_blank())
-
-# print plot
-nmds_plotg
-
-
-#prettier NMDS plot with shapes and colors
-nmds_plotg <- nmdsMerged %>% 
-  
-  #filter out municipal ww
-  filter(Type != "Mu_WW") %>% 
-  
-  #rename some variables
-  mutate(Type = case_when(Type == "Mu_WW"~ "Municipal WW",
-                          Type == "Endcap" ~ "Branch Biofilm",
-                          Type == "Drain" ~ "Sink Biofilm",
-                          Type == "H_WW" ~ "Hospital WW",
-                          .default = Type)) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5")) %>% 
-  
-  #filter locations if needed
-  #filter(Location %in% locations) %>% 
-  ggplot(aes(x = NMDS1, y = NMDS2, color = Type, shape = Location, group = Type)) +
-  geom_point() +
-  stat_ellipse(linewidth = 0.75) +
-  
-  #change colors
-  #scale_color_manual(values = c(
-    #"4" = "lightsalmon", "12" = "grey",
-   #                             )) +
-  #scale_shape_manual(values = c(1, 2
-                                #, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21,22, 29
-                                #)) +
-  theme_bw() +
-  labs(
-    title = "NMDS Plot",
-    x = "NMDS1",
-    y = "NMDS2",
-    color = "site_type",
-    size = "Collection Date"
-  ) + 
-  
-  #manualy change colors
-  scale_color_manual(values = c("Sink Biofilm" = "#79307D", "Branch Biofilm" = "#417C8C", 
-                                "Municipal WW" = resistome_colors[[3]], 
-                                "Hospital WW" = "#E57262"
-                                )) +
-  #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
-  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
-  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
-  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
-  labs(title = "Kraken2 NMDS Analysis",
-       color = "",
-       shape = "") +
-  theme(axis.text.y = element_text(angle = 45, hjust = 1)) + 
-  theme(axis.text.y = element_blank(),
-        axis.title = element_text(size= 20,face = "bold",color = "black"),
-        legend.text = element_text(size = 15,face = "bold", color = "black"))
-
-# print plot
-nmds_plotg
-
-# Save the combined plot as a PNG file
-ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "Kraken2 CT 0.5- Microbiome Bracken derived NMDS (species level) by Site and Location-ONLY SHARED DATES WITH BIOFILM.png", dpi = 300, height = 5, width = 7.5, units = "in")
-
-ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "Kraken2 CT 0.5- Microbiome Bracken derived NMDS (species level) by Site and Location-ONLY SHARED DATES WITH BIOFILM.svg", height = 6, width = 7)
-
-
-```
 
 
 
@@ -3078,6 +2427,10 @@ pairwise_adonis_microbiome = pairwise.adonis2(subset_adonis, subset_metadata$Typ
 
 #adonis.pair(vegdist(subset_adonis),subset_metadata$subarea)
 
+
+subset_adonisMGX= subset_adonis
+
+subset_metadataMGX= subset_metadata
 
 
 # Run PERMANOVA
@@ -3361,168 +2714,6 @@ diversity %>% filter(Shannon == 0) %>%        # check which samples
             by = "SampleID")
 ```
 
-#Dissimilarity Indices by Sample Type
-##BrayCurtis distance by sample type-ONLY SHARED DATES WITH BIOFILM
-```{r}
-library(dplyr)
-library(tidyr)
-library(vegan)
-library(ggplot2)
-library(ggstatsplot)
-
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# ---- Prepare genus-level matrix ----
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-
-rpip_targets <- rpip_pathogen_species_list
-
-# Filter and prepare genus_df
-analysis_df <- kraken_merged_df_filtered %>%
-  filter(
-    taxonomy_lvl == "S",
-    Location %in% locations,
-    name %in% rpip_targets,
-    Type %in% c("Drain", "Endcap", "H_WW")
-  ) %>%
-  mutate(
-    rel_ab = as.numeric(fraction_total_reads),
-    Date   = as.Date(Date),
-    Type   = factor(Type, levels = c("H_WW", "Endcap" ,"Drain"))
-  ) %>%
-  left_join(
-    sixteens_df,
-    by = c("Type", "Location", "Date")
-  ) %>%
-  drop_na(timepoint)
-
-
-biofilm_dates <- analysis_df %>%
-  filter(Type %in% c("Endcap")) %>% 
-  group_by(Location, timepoint) %>%
-  summarise(
-    biofilm_ref_date = Date,
-    .groups = "drop"
-  ) %>% distinct()
-
-filtered_df <- analysis_df %>%
-  mutate(Date = as.Date(Date)) %>%
-  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
-
-  mutate(
-    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
-  ) %>% 
-
-  #match temporal subsampling
-  group_by(Location, timepoint, Type) %>%
-  mutate(
-    best_date = min(date_diff_days)
-  ) %>%
-  ungroup() %>% 
-
-  filter(
-    (best_date == date_diff_days)
-  ) %>% 
-  
-  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date) %>% distinct() %>% 
-  
-  mutate(
-    # Make Date a string in MM/DD/YYYY format
-    DateString = format(as.Date(Date), "%m/%d/%Y"),
-    Month = format(as.Date(Date), "%m-%Y")
-  ) %>% 
-  
-  # make denominator of relative abundance total counts for rpip targets
-  group_by(SampleID, Location, Type) %>%
-  mutate(rel_ab = rel_ab / sum(rel_ab, na.rm = TRUE)) %>%
-  ungroup()
-
-
-# Create sample x species matrix
-pathogen_mat <- genus_df %>%
-  dplyr::select(SampleID, name, rel_ab) %>% distinct() %>% 
-  pivot_wider(names_from = SampleID, values_from = rel_ab, values_fill = 0) %>% 
-  column_to_rownames("name") %>%
-  t() %>%
-  as.data.frame()
-
-# ---- Compute Bray–Curtis per Location × Type ----
-bc_long <- genus_df %>%
-  filter(Type %in% c("Drain", "Endcap", "H_WW"),
-         Location %in% locations) %>%
-  group_by(Location, Type) %>%
-  group_modify(~{
-    df_sub <- .x
-    ids <- intersect(df_sub$SampleID, rownames(pathogen_mat))
-    
-    # Need at least 2 samples
-    if(length(ids) < 2){
-      return(tibble(BrayCurtis = numeric(0)))  
-    }
-    
-    # Compute Bray-Curtis
-    d <- vegdist(pathogen_mat[ids, , drop = FALSE], method = "bray")
-    d_table <- as.data.frame(as.table(as.matrix(d)))
-    colnames(d_table) <- c("Sample1", "Sample2", "BrayCurtis")
-    
-    # Keep only non-self comparisons
-    d_table <- d_table %>% filter(Sample1 != Sample2)
-    
-    # Return as a tibble (data frame)
-    tibble(BrayCurtis = d_table$BrayCurtis)
-  }) %>%
-  ungroup() %>%
-  # Add back grouping variables safely
-  mutate(Type = case_when(
-           Type == "H_WW" ~ "Wastewater",
-           Type == "Endcap" ~ "Sewer Biofilm",
-           Type == "Drain" ~ "Sink Biofilm",
-           TRUE ~ as.character(Type)
-         ))
-
-# ---- Reorder factor by median ----
-medians <- bc_long %>% group_by(Type) %>% summarise(median_bc = median(BrayCurtis))
-bc_long$Type <- factor(bc_long$Type, levels = medians$Type[order(medians$median_bc)])
-
-# ---- Plot faceted by Location ----
-Location_braycurtis_plot <- ggplot(bc_long, aes(x = Type, y = BrayCurtis)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.1, alpha = 0.5) +
-  ylab("Bray–Curtis Dissimilarity") +
-  xlab("") +
-  theme_classic() +
-  theme(axis.text.x = element_text(size = 9, face = "bold", color = "black")) +
-  facet_wrap(~Location)
-
-print(Location_braycurtis_plot)
-
-# ---- Plot with facet by Location ----
-Location_braycurtis_plot <- ggbetweenstats(
-  data = bc_long,
-  x = Type,
-  y = BrayCurtis,
-  outlier.tagging = TRUE,
-  type = "nonparametric",
-  mean.plotting = TRUE,
-  mean.ci = FALSE
-) + 
-  ylab("Bray–Curtis Dissimilarity") +
-  xlab("") +
-  theme_classic() +
-  theme(axis.text.x= element_text(size = 9, face = "bold", color= "black")) 
-
-print(Location_braycurtis_plot)
-
-
-
-# Save the combined plot as a PNG file
-ggsave(plot = Location_braycurtis_plot,path = "Biofilm Project Figures", "Kraken2 CT 0.5: Bracken-Based Bray-curtis dissimilarity-ONLY SHARED DATES WITH BIOFILM-RPIP only.png", dpi = 300, height = 6, width = 7, units = "in")
-
-
-
-```
 
 #Venn Diagrams
 ## Venn diagram for sites shared-ONLY SHARED DATES WITH BIOFILM-RPIP only
@@ -3602,164 +2793,6 @@ viridsCol3 = "#E57262"
 # Subareas to include
 locations <- c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
 
-# Species-level rows only
-venn_df <- filtered_df %>%
-
-  filter(name %in% rpip_targets) 
-
-# Loop through each location
-for (loc in locations) {
-
-  df <- venn_df %>%
-    ungroup() %>%
-    distinct(Type, Location, Date, name, rel_ab) %>%
-    filter(Location == loc) %>%
-    filter(rel_ab != 0) %>%
-    drop_na(Location)
-
-  # Build Venn input
-  ggvenn_df <- list(
-    Sink_Biofilm   = df %>% filter(Type == "Drain") %>% pull(name),
-    Sewer_Biofilm = df %>% filter(Type == "Endcap") %>% pull(name),
-    Hospital_WW  = df %>% filter(Type == "H_WW") %>% pull(name)
-  )
-
-  # Plot with a title for clarity
-  print(
-    ggvenn(
-      ggvenn_df,
-      fill_color = c(viridisCol1, viridisCol2, viridsCol3),
-      stroke_size = 0.5,
-      set_name_size = 4
-    ) +
-    ggtitle(paste("Species overlap at", loc))
-  )
-}
-
-
-#now average overlap across Sites
-
-library(dplyr)
-library(purrr)
-library(ggvenn)
-
-# Function to compute overlaps at one location
-get_overlap_counts <- function(df) {
-  sets <- list(
-    Sink_Biofilm   = df %>% filter(Type == "Drain") %>% pull(name),
-    Sewer_Biofilm = df %>% filter(Type == "Endcap") %>% pull(name),
-    Hospital_WW  = df %>% filter(Type == "H_WW") %>% pull(name)
-  )
-  
-  # All unique species
-  all_species <- unique(unlist(sets))
-  
-  # Build matrix: species × sets
-  mat <- sapply(sets, function(s) all_species %in% s)
-  
-  # Count combinations (like Venn regions)
-  counts <- apply(mat, 1, function(x) paste(which(x), collapse = "_"))
-  tibble(region = counts) %>%
-    dplyr::count(region, name = "n")
-}
-
-# ---- STEP 1: Compute overlaps per location ----
-overlap_by_loc <- venn_df %>%
-  ungroup() %>%
-  distinct(Type, Location, Date, name, rel_ab) %>%
-  filter(rel_ab != 0, Location %in% locations) %>%
-  split(.$Location) %>%
-  map(~ get_overlap_counts(.x))
-
-# ---- STEP 2: Average counts across locations ----
-avg_overlap <- bind_rows(
-  lapply(names(overlap_by_loc), function(loc) {
-    overlap_by_loc[[loc]] %>%
-      mutate(Location = loc)
-  })
-) %>%
-  group_by(region) %>%
-  summarise(avg_count = mean(n), .groups = "drop")
-
-print(avg_overlap)
-
-library(eulerr)
-
-fit <- euler(c(
-  "Sink_Biofilm"             = avg_overlap$avg_count[avg_overlap$region == "1"],
-  "Sewer_Biofilm"           = avg_overlap$avg_count[avg_overlap$region == "2"],
-  "Hospital_WW"            = avg_overlap$avg_count[avg_overlap$region == "3"],
-  "Sink_Biofilm&Sewer_Biofilm"= avg_overlap$avg_count[avg_overlap$region == "1_2"],
-  "Sink_Biofilm&Hospital_WW" = avg_overlap$avg_count[avg_overlap$region == "1_3"],
-  "Sewer_Biofilm&Hospital_WW"= avg_overlap$avg_count[avg_overlap$region == "2_3"],
-  "Sink_Biofilm&Sewer_Biofilm&Hospital_WW"= avg_overlap$avg_count[avg_overlap$region == "1_2_3"]
-))
-
-plot(fit, fills = c(viridisCol1, viridisCol2, viridsCol3), edges = TRUE)
-
-#counts
-plot(
-  fit,
-  fills = c(viridisCol1, viridisCol2, viridsCol3),
-  edges = TRUE,
-  labels = list(font = 2, cex = 0.8),   # bold, smaller text
-  quantities = list(type = "counts", font = 2, cex = 0.8) # numbers inside
-)
-
-
-
-#percentages
-plot(
-  fit,
-  fills = c(viridisCol1, viridisCol2, viridsCol3),
-  edges = TRUE,
-  labels = list(font = 2, cex = 0.8),   # bold, smaller text
-  quantities = list(type = "percent", font = 2, cex = 0.8) # numbers inside
-)
-
-
-
-library(gridGraphics)
-library(grid)
-
-# Draw the base eulerr plot onto the grid device
-grid.echo(function() {
-  plot(
-    fit,
-    fills = c(viridisCol1, viridisCol2, viridsCol3),
-    edges = TRUE,
-    labels = list(font = 2, cex = 0.8),
-    quantities = list(type = "counts", font = 2, cex = 0.8)
-  )
-})
-
-# Capture whatever is currently on the device
-g <- grid.grab()
-
-# Save with ggsave
-ggsave("Biofilm Project Figures/Kraken CT 0.5 Based Euler diagram Average Overlap -Counts -ONLY SHARED DATES WITH BIOFILM-RPIP only.svg", plot = g, width = 6, height = 6)
-
-# Save with ggsave
-ggsave("Biofilm Project Figures/Kraken CT 0.5 Based Euler diagram Average Overlap -Counts -ONLY SHARED DATES WITH BIOFILM-RPIP only.png", plot = g, width = 6, height = 6,dpi = 300)
-
-# # Draw the base eulerr plot onto the grid device
-# grid.echo(function() {
-#   plot(
-#     fit,
-#     fills = c(viridisCol1, viridisCol2, viridsCol3),
-#     edges = TRUE,
-#     labels = list(font = 2, cex = 0.8),
-#     quantities = list(type = "percent", font = 2, cex = 0.8)
-#   )
-# })
-# 
-# # Capture whatever is currently on the device
-# g <- grid.grab()
-# 
-# # Save with ggsave
-# ggsave("Biofilm Project Figures/Kraken CT 0.5 Based Euler diagram Average Overlap -Percentages -ONLY SHARED DATES WITH BIOFILM-RPIP only.svg", plot = g, width = 6, height = 6)
-# # Save with ggsave
-# ggsave("Biofilm Project Figures/Kraken CT 0.5 Based Euler diagram Average Overlap -Percentages -ONLY SHARED DATES WITH BIOFILM-RPIP only.png", plot = g, width = 6, height = 6,dpi = 300)
 
 
 #overlap for total pathogens across all Sites------------------------
@@ -3884,725 +2917,6 @@ ggsave("Biofilm Project Figures/Kraken CT 0.5 Based Euler diagram Total -Percent
 
 
 #Core Sewer Biofilm Microbiome
-## Core microbiome of sewer biofilm and hospital wastewater 0.1% relative abundance 
-```{r}
-# --------------Full Heatmap Code by Month------------------
-
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-
-# RPIP taxa
-rpip_targets <-  rpip_pathogen_species_list
-
-# ------------------------------Extract and clean-------------------------
-heatmap_df <- kraken_merged_df_filtered %>%
-  filter(taxonomy_lvl== "S") %>% 
-  mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
-  filter(Location %in% locations) %>% 
-  filter(name %in% c(rpip_targets)) %>% 
-  filter(Type %in% c("Endcap", "H_WW")) %>% 
-  
-  #filter dates
-  filter(
-    (Type == "H_WW" & Date %in% dates) |
-    (Type != "H_WW")
-  ) %>% 
-  
-  mutate(
-    presence = if_else(rel_ab > 0, 1, 0),
-    Type = factor(Type, levels = c("Drain", "Endcap", "H_WW")),
-    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", TRUE ~ as.character(Type)),
-    Month = format(as.Date(Date), "%m-%Y")  # X-axis by month
-  ) %>% 
-
-  
-  dplyr::select(SampleID,name,Location,Type,Date, rel_ab,presence) %>% 
-  
-  #filter for pathogens detected both at least once in h_ww and once in sewer biofilm
-  group_by(name) %>%
-  filter(
-    sum(presence[Type == "Endcap"], na.rm = TRUE) > 0 &   # detected at least once in Sewer Biofilm
-    sum(presence[Type == "H_WW"], na.rm = TRUE) > 0      # detected at least once in Hospital Wastewater
-  ) %>%
-  ungroup() %>% 
-  
-  #now filter for species detected at least five times total
-  group_by(name) %>%
-  filter(
-    sum(presence, na.rm = TRUE) >= 5                     # at least 5 times total
-  ) %>%
-  ungroup()
-
-# ---------- STEP 2: Collapse into top species ----------
-
-n_species = 44
-
-# get top 25 globally by total rel_ab
-top_species <- heatmap_df %>%
-  group_by(name) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_species) %>%
-  pull(name)
-
-# assign species or "Other"
-plot_df <- heatmap_df %>%
-  dplyr::select(name, SampleID, Date, Location, Type, rel_ab) %>%
-  mutate(
-    Type = case_when(
-      Type == "H_WW"   ~ "Hospital Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain"  ~ "Sink Biofilm",
-      .default = Type
-    ),
-    class = factor(ifelse(name %in% top_species, name, "Other")),
-    Type  = factor(Type, levels = c("Sewer Biofilm", "Hospital Wastewater"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5"))
-
-# ------ Assign Colors-----------
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-
-# ------------------------------Stacked Bar Plot ------------------------------
-
-library(ggplot2)
-library(dplyr)
-library(forcats)  # for fct_reorder
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-# 1) Build a per-facet ordering of samples (one row per unique sample)
-sample_order <- plot_df %>%
-  distinct(Location, Type, SampleID, Date) %>%
-  group_by(Location, Type) %>%
-  arrange(Date, SampleID, .by_group = TRUE) %>%
-  mutate(
-    Event = row_number(),                                # 1..N per facet (no gaps)
-    EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
-  ) %>%
-  ungroup()
-
-# 2) Join that back so every row has its facet-local Event index
-plot_df2 <- plot_df %>%
-  left_join(sample_order, by = c("Location","Type","SampleID","Date"))
-
-# italicize legend labels
-species_labels <- setNames(
-  ifelse(levels(plot_df2$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df2$class), "*")),   # markdown italics
-  levels(plot_df2$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-plot_df2 <- plot_df2 %>%
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm",
-                       "Hospital Wastewater" = "Hospital\nWastewater"))
-
-
-plot = ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels) +
-  scale_y_continuous(
-    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-    labels = c("0","25", "50", "75"),   # plain numbers, no %
-    limits = c(0, 1)                 # optional: keep to 100%
-  ) +
-  labs(x = NULL, y = "Percent of Annotated RPIP Reads", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 4))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  axis.text.x        = element_blank(),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "bottom",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-  ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 Core Microbiome Stacked Bar-ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=6, height=7,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 Core Microbiome Stacked Bar-ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=6, height=7)
-  
-
-
-```
-
-##set themes
-```{r}
-font_add_google("Reem Kufi", "Reem Kufi")   # <-- REQUIRED
-showtext_auto()                             # <-- activates showtext
-
-
-## ggplot theme
-theme_set(theme_minimal(base_family = "Reem Kufi", base_size = 12))
-
-theme_update(
-  plot.title = element_text(size = 27,
-                            face = "bold",
-                            hjust = .5,
-                            margin = margin(10, 0, 30, 0)),
-  plot.caption = element_text(size = 9,
-                              color = "grey40",
-                              hjust = .5,
-                              margin = margin(20, 0, 5, 0)),
-  axis.text.y = element_blank(),
-  axis.title = element_blank(),
-  plot.background = element_rect(fill = "grey88", color = NA),
-  panel.background = element_rect(fill = NA, color = NA),
-  panel.grid = element_blank(),
-  panel.spacing.y = unit(0, "lines"),
-  strip.text.y = element_blank(),
-  legend.position = "bottom",
-  legend.text = element_text(size = 9, color = "grey40"),
-  legend.box.margin = margin(t = 30), 
-  legend.background = element_rect(color = "grey40", 
-                                   size = .3, 
-                                   fill = "grey95"),
-  legend.key.height = unit(.25, "lines"),
-  legend.key.width = unit(2.5, "lines"),
-  plot.margin = margin(rep(20, 4))
-)
-
-#second-------------------
-
-font_add_google("Chivo", "Chivo")
-font_add_google("Passion One", "Passion One")
-
-## ggplot theme
-theme_set(theme_minimal(base_family = "Chivo"))
-
-theme_update(axis.text.x = element_text(size = 11, color = "grey20"),
-             axis.text.y = element_text(size = 13, color = "black", face = "bold"),
-             axis.ticks.x = element_line(color = "grey45"),
-             axis.ticks.y = element_blank(),
-             axis.ticks.length.x = unit(.4, "lines"),
-             panel.grid = element_blank(),
-             plot.background = element_rect(fill = "grey60", color = "grey60"))
-```
-
-## Shared species of core microbiome of sewer biofilm and wastewater relative abundance distribution plot and detection plot
-```{r}
-
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-
-
-# RPIP taxa
-rpip_targets <-  rpip_pathogen_species_list
-
-
-
-# --------Extract and clean biofilm dataframe-------------------------
-
-# Define detection thresholds in percent
-thresholds <- seq(0, 5, by = 0.5)  # 0% to 5% relative abundance
-
-
-heatmap_df <- kraken_merged_df_filtered %>%
-  filter(taxonomy_lvl== "S") %>% 
-  mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
-  filter(Location %in% locations) %>% 
-  filter(name %in% c(rpip_targets)) %>% 
-  filter(Type %in% c("Endcap")) %>% 
-  
-  #filter dates
-  filter(
-    (Type == "H_WW" & Date %in% dates) |
-    (Type != "H_WW")
-  ) %>%
-  
-  mutate(
-    presence = if_else(rel_ab > 0, 1, 0),
-    Type = factor(Type, levels = c("Drain", "Endcap", "H_WW")),
-    Type = case_when(
-      Type == "H_WW"   ~ "Hospital Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain"  ~ "Sink Biofilm",
-      .default = Type
-    ),
-    Month = format(as.Date(Date), "%m-%Y")  # X-axis by month
-  ) %>% 
-  
-  dplyr::select(SampleID,name,Location,Type,Date, rel_ab,presence) %>% 
-  
-   # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location))
-
-
-
-
-prevalence_df <- expand.grid(
-  name = unique(heatmap_df$name),
-  threshold = thresholds
-) %>% 
-  as_tibble() %>%
-  left_join(
-    heatmap_df %>% mutate(rel_ab_pct = rel_ab * 100),  # convert to %
-    by = "name"
-  ) %>%
-  group_by(name, threshold) %>%
-  summarise(
-    prevalence = mean(rel_ab_pct >= threshold, na.rm = TRUE) * 100,
-    .groups = "drop"
-  )
-
-# -------------Order biofilm species by prevalence at highest threshold--------------------------
-biofilm_species_order <- prevalence_df %>%
-  group_by(name) %>% 
-  summarise(sum_prevalence = sum(prevalence,na.rm = TRUE)) %>%
-  ungroup() %>% 
-  arrange(sum_prevalence) %>%  # lowest prevalence at top, highest at bottom
-  pull(name)
-
-#prevalence_df$name <- factor(prevalence_df$name, levels = species_order)
-
-
-# --------Extract and clean ww dataframe-------------------------
-
-# Define detection thresholds in percent
-thresholds <- seq(0, 5, by = 0.5)  # 0% to 5% relative abundance
-
-
-heatmap_df <- kraken_merged_df_filtered %>%
-  filter(taxonomy_lvl== "S") %>% 
-  mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
-  filter(Location %in% locations) %>% 
-  filter(name %in% c(rpip_targets)) %>% 
-  filter(Type %in% c("H_WW")) %>% 
-  
-  #filter dates
-  filter(
-    (Type == "H_WW" & Date %in% dates) |
-    (Type != "H_WW")
-  ) %>%
-  
-  mutate(
-    presence = if_else(rel_ab > 0, 1, 0),
-    Type = factor(Type, levels = c("Drain", "Endcap", "H_WW")),
-    Type = case_when(
-      Type == "H_WW"   ~ "Hospital Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain"  ~ "Sink Biofilm",
-      .default = Type
-    ),
-    Month = format(as.Date(Date), "%m-%Y")  # X-axis by month
-  ) %>% 
-  
-  dplyr::select(SampleID,name,Location,Type,Date, rel_ab,presence) %>% 
-  
-   # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location))
-
-
-
-
-prevalence_df <- expand.grid(
-  name = unique(heatmap_df$name),
-  threshold = thresholds
-) %>% 
-  as_tibble() %>%
-  left_join(
-    heatmap_df %>% mutate(rel_ab_pct = rel_ab * 100),  # convert to %
-    by = "name"
-  ) %>%
-  group_by(name, threshold) %>%
-  summarise(
-    prevalence = mean(rel_ab_pct >= threshold, na.rm = TRUE) * 100,
-    .groups = "drop"
-  )
-
-# -------------Order ww species by prevalence at highest threshold--------------------------
-ww_species_order <- prevalence_df %>%
-  group_by(name) %>% 
-  summarise(sum_prevalence = sum(prevalence,na.rm = TRUE)) %>%
-  ungroup() %>% 
-  arrange(sum_prevalence) %>%  # lowest prevalence at top, highest at bottom
-  pull(name)
-
-
-
-#-----------Make new dataframe with biofilm and ww species -----------------
-df <- kraken_merged_df_filtered %>%
-  filter(taxonomy_lvl== "S") %>% 
-  mutate(rel_ab = as.numeric(fraction_total_reads)) %>% 
-  filter(Location %in% locations) %>% 
-  filter(name %in% c(ww_species_order,biofilm_species_order)) %>% 
-  filter(Type %in% c("H_WW","Endcap")) %>% 
-  
-  #filter dates
-  filter(
-    (Type == "H_WW" & Date %in% dates) |
-    (Type != "H_WW")
-  ) %>%
-  
-  mutate(
-    presence = if_else(rel_ab > 0, 1, 0),
-    Type = factor(Type, levels = c("Endcap", "H_WW")),
-    Type = case_when(
-      Type == "H_WW"   ~ "Hospital Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain"  ~ "Sink Biofilm",
-      .default = Type
-    ),
-    Month = format(as.Date(Date), "%m-%Y")  # X-axis by month
-  ) %>% 
-  
-  dplyr::select(SampleID,name,Location,Type,Date, rel_ab,presence) %>% 
-  
-   # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location))
-
-
-# Count detects per gene × Type
-df_detects <- df %>%
-  group_by(name, SampleID) %>% 
-  mutate(sum_rel_ab = sum(rel_ab,na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  
-  dplyr::select(name,Type,Location,SampleID,sum_rel_ab,rel_ab) %>% distinct() %>%
-  
-  mutate(detect = ifelse(sum_rel_ab>0,1,0)) %>% 
-  
-  group_by(name, Type) %>%
-  mutate(
-    n_detects_type = sum(detect, na.rm = TRUE),   # how many samples detected?
-    .groups = "drop"
-  ) %>%
-  ungroup() %>% 
-  
-  filter(n_detects_type >0) %>% 
-  
-  dplyr::select(name,Type,Location,n_detects_type,rel_ab) %>% distinct() 
-
-# Total detects per species (for ordering)
-detect_order <- df_detects %>%
-  dplyr::select(name,Type,Location,n_detects_type) %>% distinct() %>% 
-  group_by(name) %>%
-  summarise(n_detects = sum(n_detects_type)
-         #, .groups = "drop"
-         ) %>%
-  arrange(desc(n_detects))
-
-# compute detection + average rel_ab
-df_ranks_type <- df_detects %>%
-  left_join(detect_order, by = "name") %>%
-  
-mutate(ID = rank(-n_detects_type, ties.method = "first")) %>%
-  
-  mutate(
-    name = factor(
-      name,
-      levels = unique(name[order(n_detects, -n_detects_type)])
-    )
-  ) %>% 
-  
-  mutate(
-    TypeLabel = case_when(
-      Type == "H_WW" ~ "Hospital Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain" ~ "Sink Biofilm",
-      .default = Type
-    ),
-    TypeLabel = factor(TypeLabel, 
-                       levels = c("Hospital Wastewater", 
-                                  "Sewer Biofilm", 
-                                  "Sink Biofilm")),
-    type_num = as.numeric(TypeLabel)
-  ) 
-
-species_order <- df_ranks_type %>%
-  dplyr::select(name, n_detects) %>%
-  distinct() %>%
-  arrange(n_detects) %>%          # low → high (top → bottom after flip)
-  pull(name)
-
-  
-df_ranks_type = df_ranks_type %>% 
-  mutate(
-    Species_label_italic = paste0("<i>", name, "</i>"),
-    Species_label_italic = factor(
-      Species_label_italic,
-      levels = paste0("<i>", species_order, "</i>")
-    )
-  ) %>%  # Convert Species_label to italicized labels
-  
-  #mutate(Species_label_italic = fct_reorder(Species_label_italic, n_detects, .desc = FALSE)) %>% 
-  
-  filter(n_detects >0)
-
-list = df_ranks_type %>% dplyr::select(name) %>% distinct() %>% pull()  
-
-
-# Keep the same order as bars
-species_levels <- df_ranks_type %>%
-  arrange(n_detects) %>%      # lowest prevalence top, highest bottom
-  pull(Species_label_italic) %>% unique()
-
-df_ranks_type <- df_ranks_type %>%
-  mutate(Species_label_italic = factor(Species_label_italic, levels = species_levels))
-
-
-
-#Plot-------------
-library(grid)
-library(ggtext)
-
-species_grob <- textGrob(
-  label = df_ranks_type %>% 
-    distinct(Species_label_italic) %>% 
-    arrange(fct_rev(Species_label_italic)) %>% 
-    pull(Species_label_italic),
-  x = unit(0, "npc"),
-  y = unit(seq(1, 0, length.out = length(unique(df_ranks_type$Species_label_italic))), "npc"),
-  just = "left",
-  gp = gpar(fontsize = 9)
-)
-
-
-bars <- df_ranks_type %>%  mutate(Species_label_italic = fct_rev(Species_label_italic)) %>% 
-    ggplot(aes(x = Type,
-             y = n_detects_type,
-             fill = Type)) +
-    geom_col(aes(fill = Type),
-             position = position_dodge(width = 0.9),
-             width = 0.8) +
-    coord_flip(clip = "off")+
-  
-  #   annotation_custom(
-  #   grob = species_grob,
-  #   xmin = -Inf, xmax = -Inf,
-  #   ymin = -Inf, ymax = Inf
-  # ) +
-  
-    # Add species label text on the left with HTML italics
-  geom_richtext(
-    data = df_ranks_type %>% distinct(Species_label_italic),
-    aes(
-      x = 0,      # adjust as needed to be on left
-      y = 0.2,    # center of y-axis
-      label = Species_label_italic
-    ),
-    size = 26,
-    inherit.aes = FALSE,
-    hjust = 0,
-    fill = NA,     # remove background box
-    label.color = NA  # remove border
-  ) +
-  
-    facet_wrap(~ Species_label_italic, 
-             scales = "free_y",
-             ncol = 1,
-             strip.position = "left"
-             #dir = "v"           # vertical direction (bottom → top)
-             ) +
-  scale_fill_viridis_d(option = "D") +   # <-- Viridis discrete colors
-  theme_classic()+
-    theme(
-          #axis.text.y.right = element_markdown(hjust = .5,size = 62),
-          axis.text.x = element_text(size = 62),
-          axis.title = element_text(size = 75,face = "bold"),
-          axis.line.x = element_blank(),  # removes the x-axis line
-          axis.text.y = element_blank(),      # remove x-axis labels
-          legend.position = "none",
-          axis.ticks = element_blank(),
-          strip.text.y = element_blank(),
-          plot.margin = margin(t = 5, r = 5, b = 5, l = 5)  # <- space for labels
-          #legend.text = element_text(size = 68, face = "bold")
-          ) +
-    labs(
-        x = "", 
-         fill = "",
-         color = "",
-         y = "Number of detections")
-  
-  
-  # df_ranks_type %>% 
-  # ggplot(aes(x = Species_label_italic,
-  #            y = n_detects_type,
-  #            fill = Type)) +
-  #   geom_col(aes(fill = Type),
-  #            position = position_dodge(width = 0.9),
-  #            width = 0.8) +
-  # coord_flip(clip = "off") +
-  #   
-  # scale_x_discrete(position = "top") +
-  #facet_grid(Species_label_italic + Type ~ n_detects_type)+
-# scale_y_continuous(
-#   expand = c(.02, .02),
-#   limits = c(
-#     -max(df_ranks_type$n_detects) - max(df_ranks_type$n_detects)/4,
-#     0
-#   ),
-#   breaks = seq(
-#     -(max(df_ranks_type$n_detects) - max(df_ranks_type$n_detects)/4),
-#     0,
-#     by = max(df_ranks_type$n_detects)/4
-#   ),
-#   labels = function(x) abs(as.integer(round(x))),
-#   position = "right"
-# )+
-
-    # theme(
-    #       #axis.text.y.right = element_blank(),
-    #       axis.text.y.right = element_markdown(hjust = .5,size = 62),
-    #       axis.text.x = element_text(size = 62),
-    #       axis.title = element_text(size = 75,face = "bold"),
-    #       legend.position = "left",
-    #       #plot.margin = margin(5, 0, 5, 5),
-    #       legend.text = element_text(size = 68, face = "bold")
-    #       ) +
-    # labs(x = NULL, 
-    #      fill = "",
-    #      y = "Number of detections")
-
-dens <- df_ranks_type %>%  mutate(Species_label_italic = fct_rev(Species_label_italic)) %>% 
-  ggplot(aes(
-  x = log10(rel_ab),
-  color = Type,
-  fill  = Type
-)) +
-  geom_density(alpha = 0.4) +
-  
-  # # Add species label text on the left with HTML italics
-  # geom_richtext(
-  #   data = df_ranks_type %>% distinct(Species_label_italic),
-  #   aes(
-  #     x = -5,      # adjust as needed to be on left
-  #     y = 0.5,    # center of y-axis
-  #     label = Species_label_italic
-  #   ),
-  #   inherit.aes = FALSE,
-  #   hjust = 0,
-  #   fill = NA,     # remove background box
-  #   label.color = NA  # remove border
-  # ) +
-
-  facet_wrap(~ Species_label_italic, 
-             scales = "free_y",
-             strip.position = "left",
-             ncol = 1,
-             #dir = "v"           # vertical direction (bottom → top)
-             ) +
-  
-  scale_fill_viridis_d(option = "D") +   # <-- Viridis discrete colors
-  scale_color_viridis_d(option = "D") +   # <-- Viridis discrete colors
-  theme_classic() +
-
-    theme(
-        #axis.ticks.x = element_blank(),
-          strip.text = element_blank(),
-          #axis.ticks.y = element_blank(),
-          axis.title = element_text(size = 75, face = "bold"),
-          axis.text.x = element_text(size = 56, face = "bold"),
-          axis.text.y = element_text(size = 49),
-          legend.text = element_text(size = 62, face = "bold"),
-          plot.margin = margin(5, 5, 5, 0),
-          #plot.caption = element_text(face = "bold", color = "grey30",size = 32, margin = margin(t = 15))
-          ) +
-  labs(
-    x = "Relative abundance",
-    fill = "",
-    color = "",
-    y = "Density"
-  )
-
-# df_ranks_type %>% 
-# 
-#   ggplot(aes(Species_label_italic,  group = Species_label_italic)) +
-#   
-#     geom_density(aes(x = Species_label_italic,
-#                      y = rel_ab,
-#                      color = Type)) +
-# 
-#     coord_flip() +
-    # scale_y_continuous(limits = c(.5, 7.3),
-    #                    breaks = 1:3,
-    #                    labels = c("Hospital Wastewater", 
-    #                               "Sewer Biofilm", 
-    #                               "Sink Biofilm"), 
-    #                    position = "right") +
-  #scale_size(range = c(0.5, 2.6), guide = FALSE)+
-  #scale_size(range = c(2, 5.5), guide = F) +
-    # nord::scale_fill_nord(palette = "halifax_harbor", 
-    #                       discrete = T, 
-    #                       reverse = F, 
-    #                       guide = F) +
-
-    # labs(x = NULL, y = NULL,
-    #      caption = "")
-
-
-library(patchwork)
-plot = bars + dens + plot_layout(widths = c(1, 0.5))
-
-#plot_spacer() + bars + dots + plot_layout(widths = c(1, .35), heights = c(.1, 1))
-
-
-ggsave(path = "Biofilm Project Figures",file="Kraken2 CT 0.5-Core Microbiome Rel Ab and Distribution-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=12, height= 24,dpi = 600)
-ggsave(path = "Biofilm Project Figures",file="Kraken2 CT 0.5-Core Microbiome Rel Ab and Distribution-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=12, height=12)
-
-```
-
-
 ##Reset Themes
 ```{r}
 library(ggplot2)
@@ -4876,796 +3190,9 @@ ggsave("Biofilm Project Figures/Kraken CT 0.5 Based Sewer Biofilm Core Microbiom
 ```
 
 
-##Only Sewer Biofilm Stacked bars (facet nested by Location and Type) top 44 species by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -- out of 100 with the RPIP total number of pathogens as the denominator-ONLY SHARED DATES WITH BIOFILM WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
-```{r}
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-# Assuming 'metaphlan_output' is your MetaPhlAn data frame
-
-# RPIP taxa
-rpip_targets <- rpip_pathogen_species_list
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-library(viridis)
-library(ggh4x)
-
-# ---------- STEP 1: Extract and clean ----------
-analysis_df <- kraken_merged_df_filtered %>%
-  filter(
-    taxonomy_lvl == "S",
-    Location %in% locations,
-    name %in% rpip_targets,
-    Type %in% c("Endcap")
-  ) %>%
-  mutate(
-    rel_ab = as.numeric(fraction_total_reads),
-    Date   = as.Date(Date),
-    Type   = factor(Type, levels = c("Endcap"))
-  ) %>%
-  left_join(
-    sixteens_df,
-    by = c("Type", "Location", "Date")
-  ) %>%
-  drop_na(timepoint)
-
-
-biofilm_dates <- analysis_df %>%
-  filter(Type %in% c("Endcap")) %>% 
-  group_by(Location, timepoint) %>%
-  summarise(
-    biofilm_ref_date = Date,
-    .groups = "drop"
-  ) %>% distinct()
-
-filtered_df <- analysis_df %>%
-  mutate(Date = as.Date(Date)) %>%
-  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
-
-  mutate(
-    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
-  ) %>% 
-
-  #match temporal subsampling
-  group_by(Location, timepoint, Type) %>%
-  mutate(
-    best_date = min(date_diff_days)
-  ) %>%
-  ungroup() %>% 
-
-  filter(
-    (best_date == date_diff_days)
-  ) %>% 
-  
-  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
-
-df <- filtered_df %>%
-  
-  
-  mutate(
-    Type = factor(Type, levels = c("Endcap")),
-    # Make Date a string in MM/DD/YYYY format
-    DateString = format(as.Date(Date), "%m/%d/%Y"),
-    Month = format(as.Date(Date), "%m-%Y")
-  ) %>%
-
-
-  
-  # make denominator of relative abundance total counts for rpip targets
-  group_by(SampleID, Location, Type) %>%
-  mutate(rel_ab = rel_ab / sum(rel_ab, na.rm = TRUE)) %>%
-  ungroup()
-
-# ---------- New Way: Assign letters time points ----------
-drain_samples <- df %>%
-  filter(Type == "Drain") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint) %>% 
-  group_by(Location, DateString) %>%
-  mutate(SampleLetter = letters[seq_len(n())],
-         NewDateString = paste0(timepoint, "-", SampleLetter)) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for sewer biofilm replicates ----------
-sewer_samples  <- df %>%
-  filter(Type == "Endcap") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint) %>% 
-  group_by(Location, DateString) %>%
-  mutate(SampleLetter = letters[seq_len(n())],
-         #NewDateString = paste0(timepoint, "-", SampleLetter)) %>%
-         NewDateString = timepoint) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for ww replicates ----------
-ww_samples  <- df %>%
-  filter(Type == "H_WW") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint) %>% 
-  group_by(Location, DateString) %>%
-  mutate(SampleLetter = letters[seq_len(n())],
-         #NewDateString = paste0(timepoint, "-", SampleLetter)) %>%
-          NewDateString = timepoint) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# Combine drain and sewer samples
-replicate_samples <- bind_rows(
-  drain_samples,
-  ww_samples,
-  sewer_samples %>% dplyr::select(SampleID, Location, DateString, Type, NewDateString)
-)
-
-# ---------- Join back to main dataframe ----------
-df_update <- df %>%
-  left_join(replicate_samples, by = c("SampleID", "Location", "DateString", "Type")) %>%
-  mutate(
-    NewDateString = ifelse(is.na(NewDateString) == TRUE, DateString, NewDateString)
-  )
-
-
-# ---------- Collapse into top species ----------
-
-n_species = 44
-
-# get top 25 globally by total rel_ab
-top_species <- df_update %>%
-  group_by(name) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_species) %>%
-  pull(name)
-
-# assign species or "Other"
-plot_df <- df_update %>%
-  dplyr::select(name, SampleID, Date, Location, Type, rel_ab,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "H_WW"   ~ "Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain"  ~ "Sink Biofilm",
-      .default = Type
-    ),
-    class = factor(ifelse(name %in% top_species, name, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location))
-
-# ---------- Colors for Plot ----------
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-
-
-##actual plotting-----------
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-# # 1) Build a per-facet ordering of samples (one row per unique sample)
-# sample_order <- plot_df %>%
-#   distinct(Location, Type, SampleID, Date) %>%
-#   group_by(Location, Type) %>%
-#   arrange(Date, SampleID, .by_group = TRUE) %>%
-#   mutate(
-#     Event = row_number(),                                # 1..N per facet (no gaps)
-#     EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
-#   ) %>%
-#   ungroup()
-# 
-# # 2) Join that back so every row has its facet-local Event index
-# plot_df2 <- plot_df %>%
-#   left_join(sample_order, by = c("Location","Type","SampleID","Date"))
-
-# italicize legend labels
-species_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-plot_df <- plot_df %>%
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels) +
-  scale_y_continuous(
-    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-    labels = c("0","25", "50", "75"),   # plain numbers, no %
-    limits = c(0, 1)                 # optional: keep to 100%
-  ) +
-  labs(x = NULL, y = "Percent of Annotated RPIP Reads", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 1))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  axis.text.x        = element_blank(),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-
-
-  ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected Overall-Only in Sewer biofilm -ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=5, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected Overall-Only in Sewer biofilm -ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=5, height=6)
-  
-#for slides
-  
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels) +
-  scale_y_continuous(
-    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-    labels = c("0","25", "50", "75"),   # plain numbers, no %
-    limits = c(0, 1)                 # optional: keep to 100%
-  ) +
-  labs(x = NULL, y = "Percent of Annotated RPIP Reads", fill = "", title = "Kraken Species Detected") +
-theme_minimal(base_size = 11) +
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  axis.text.x        = element_blank(),
-  panel.spacing      = unit(0.05, "lines"),
-  legend.position    = "bottom",
-  legend.key.size    = unit(0.1, "cm"),
-  legend.spacing.x = unit(0.2, "cm"),   # space between items horizontally
-  legend.spacing.y = unit(0.2, "cm"),    # space between rows if wrapped
-  legend.text        = ggtext::element_markdown(size = 7.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  legend.key.width  = unit(1, "cm"),
-  legend.key.height = unit(0.5, "cm"),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)+
-  guides(fill = guide_legend(ncol = 3))
-
-
-print(plot)
-
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected-slides-ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=7, height=8,dpi = 600)
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected-slides-ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=7, height=8)
-  # 
-  
-# now vertical:
-  
-  plot = ggplot(plot_df, aes(y = NewDateString, x = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Type ~ Location, scales = "free_y", space = "free_y",switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels,
-                    guide = guide_legend(
-    nrow = 4,              # number of rows in the legend
-    byrow = TRUE,          # fill across rows instead of down columns
-    title.position = "top" # keep the title above
-  )
-  ) +
-  scale_x_continuous(
-    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-    labels = c("0","25", "50", "75"),  # plain numbers, no %
-    limits = c(0, 1)
-  ) +
-  labs(y = NULL, x = "Percent of Annotated RPIP Reads", fill = "") +
-  theme_minimal(base_size = 11) +
-  theme(
-    panel.background = element_rect(fill = "white", colour = "black"),
-    strip.background = element_rect(fill = "white", colour = "black"),
-    strip.text = element_text(
-      face = "bold", 
-      hjust = 0.5,
-      vjust = 0.5,
-      lineheight = 0.9
-    ),
-    axis.text.y        = element_blank(),  # hide if crowded
-    panel.spacing      = unit(0.05, "lines"),
-    legend.position    = "bottom",
-    legend.key.size    = unit(0.5, "cm"),
-    legend.text        = ggtext::element_markdown(size = 8),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    panel.ontop        = FALSE
-  )
-
-  
-  print(plot)
-
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 Bracken stacked bar plot of pathogens detected Overall -vertical-ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=6.5, height=10,dpi = 500)
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 Bracken stacked bar plot of pathogens detected in Overall-vertical-ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=5, height=9)
-
-
-library(dplyr)
-
-# # Create summary table of percent contribution by pathogen and sample type
-# pathogen_summary <- plot_df %>%
-#   group_by(class, Type) %>%
-#   summarise(
-#     MinPercent = min(rel_ab, na.rm = TRUE) * 100,
-#     MaxPercent = max(rel_ab, na.rm = TRUE) * 100,
-#     MeanPercent = mean(rel_ab, na.rm = TRUE) * 100,
-#     .groups = "drop"
-#   ) %>%
-#   rename(Pathogen = class, SampleType = Type) %>%
-#   arrange(SampleType, desc(MeanPercent))
-# 
-# # View the table
-# pathogen_summary
-
-
-```
-
-
-
-
-
-##Only Sewer Biofilm Stacked bars (facet nested by Location and Type) top 44 species by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -- with the RPIP rel abundance as total-ONLY SHARED DATES WITH BIOFILM WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
-```{r}
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-# Assuming 'metaphlan_output' is your MetaPhlAn data frame
-
-# RPIP taxa
-rpip_targets <-  rpip_pathogen_species_list
-
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-library(viridis)
-library(ggh4x)
-
-# ---------- STEP 1: Extract and clean ----------
-analysis_df <- kraken_merged_df_filtered %>%
-  filter(
-    taxonomy_lvl == "S",
-    Location %in% locations,
-    name %in% rpip_targets,
-    Type %in% c("Endcap")
-  ) %>%
-  mutate(
-    rel_ab = as.numeric(fraction_total_reads),
-    Date   = as.Date(Date),
-    Type   = factor(Type, levels = c("Endcap"))
-  ) %>%
-  left_join(
-    sixteens_df,
-    by = c("Type", "Location", "Date")
-  ) %>%
-  drop_na(timepoint)
-
-
-biofilm_dates <- analysis_df %>%
-  filter(Type %in% c("Endcap")) %>% 
-  group_by(Location, timepoint) %>%
-  summarise(
-    biofilm_ref_date = Date,
-    .groups = "drop"
-  ) %>% distinct()
-
-filtered_df <- analysis_df %>%
-  mutate(Date = as.Date(Date)) %>%
-  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
-
-  mutate(
-    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
-  ) %>% 
-
-  #match temporal subsampling
-  group_by(Location, timepoint, Type) %>%
-  mutate(
-    best_date = min(date_diff_days)
-  ) %>%
-  ungroup() %>% 
-
-  filter(
-    (best_date == date_diff_days)
-  ) %>% 
-  
-  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
-
-df <- filtered_df %>%
-  
-  
-  mutate(
-    Type = factor(Type, levels = c("Endcap")),
-    # Make Date a string in MM/DD/YYYY format
-    DateString = format(as.Date(Date), "%m/%d/%Y"),
-    Month = format(as.Date(Date), "%m-%Y")
-  ) 
-
-# ---------- New Way: Assign letters time points ----------
-drain_samples <- df %>%
-  filter(Type == "Drain") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint) %>% 
-  group_by(Location, DateString) %>%
-  mutate(SampleLetter = letters[seq_len(n())],
-         NewDateString = paste0(timepoint, "-", SampleLetter)) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for sewer biofilm replicates ----------
-sewer_samples  <- df %>%
-  filter(Type == "Endcap") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint) %>% 
-  group_by(Location, DateString) %>%
-  mutate(SampleLetter = letters[seq_len(n())],
-         #NewDateString = paste0(timepoint, "-", SampleLetter)) %>%
-         NewDateString = timepoint) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for ww replicates ----------
-ww_samples  <- df %>%
-  filter(Type == "H_WW") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint) %>% 
-  group_by(Location, DateString) %>%
-  mutate(SampleLetter = letters[seq_len(n())],
-         #NewDateString = paste0(timepoint, "-", SampleLetter)) %>%
-          NewDateString = timepoint) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# Combine drain and sewer samples
-replicate_samples <- bind_rows(
-  drain_samples,
-  ww_samples,
-  sewer_samples %>% dplyr::select(SampleID, Location, DateString, Type, NewDateString)
-)
-
-# ---------- Join back to main dataframe ----------
-df_update <- df %>%
-  left_join(replicate_samples, by = c("SampleID", "Location", "DateString", "Type")) %>%
-  mutate(
-    NewDateString = ifelse(is.na(NewDateString) == TRUE, DateString, NewDateString)
-  )
-
-
-# ---------- Collapse into top species ----------
-
-n_species = 44
-
-# get top 25 globally by total rel_ab
-top_species <- df_update %>%
-  group_by(name) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_species) %>%
-  pull(name)
-
-# assign species or "Other"
-plot_df <- df_update %>%
-  dplyr::select(name, SampleID, Date, Location, Type, rel_ab,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "H_WW"   ~ "Wastewater",
-      Type == "Endcap" ~ "Sewer Biofilm",
-      Type == "Drain"  ~ "Sink Biofilm",
-      .default = Type
-    ),
-    class = factor(ifelse(name %in% top_species, name, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location))
-
-# ---------- Colors for Plot ----------
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-
-
-##actual plotting-----------
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-# # 1) Build a per-facet ordering of samples (one row per unique sample)
-# sample_order <- plot_df %>%
-#   distinct(Location, Type, SampleID, Date) %>%
-#   group_by(Location, Type) %>%
-#   arrange(Date, SampleID, .by_group = TRUE) %>%
-#   mutate(
-#     Event = row_number(),                                # 1..N per facet (no gaps)
-#     EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
-#   ) %>%
-#   ungroup()
-# 
-# # 2) Join that back so every row has its facet-local Event index
-# plot_df2 <- plot_df %>%
-#   left_join(sample_order, by = c("Location","Type","SampleID","Date"))
-
-# italicize legend labels
-species_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-plot_df <- plot_df %>%
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance of Annotated RPIP Reads", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 1))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  axis.text.x        = element_blank(),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-  ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected Overall-not out of 100-Only in Sewer biofilm -ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=5, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected Overall not out of 100-Only in Sewer biofilm -ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=5, height=6)
-  
-#for slides
-  
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Percent of Annotated RPIP Reads", fill = "", title = "Kraken Species Detected") +
-theme_minimal(base_size = 11) +
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  axis.text.x        = element_blank(),
-  panel.spacing      = unit(0.05, "lines"),
-  legend.position    = "bottom",
-  legend.key.size    = unit(0.1, "cm"),
-  legend.spacing.x = unit(0.2, "cm"),   # space between items horizontally
-  legend.spacing.y = unit(0.2, "cm"),    # space between rows if wrapped
-  legend.text        = ggtext::element_markdown(size = 7.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  legend.key.width  = unit(1, "cm"),
-  legend.key.height = unit(0.5, "cm"),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)+
-  guides(fill = guide_legend(ncol = 3))
-
-
-print(plot)
-
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected-slides-not out of 100-ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=7, height=8,dpi = 600)
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 stacked bar plot of pathogens detected-slides-not out of 100-ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=7, height=8)
-  # 
-  
-# now vertical:
-  
-  plot = ggplot(plot_df, aes(y = NewDateString, x = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Type ~ Location, scales = "free_y", space = "free_y",switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = species_labels,
-                    guide = guide_legend(
-    nrow = 4,              # number of rows in the legend
-    byrow = TRUE,          # fill across rows instead of down columns
-    title.position = "top" # keep the title above
-  )
-  ) +
-  # scale_x_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),  # plain numbers, no %
-  #   limits = c(0, 1)
-  # ) +
-  labs(y = NULL, x = "Percent of Annotated RPIP Reads", fill = "") +
-  theme_minimal(base_size = 11) +
-  theme(
-    panel.background = element_rect(fill = "white", colour = "black"),
-    strip.background = element_rect(fill = "white", colour = "black"),
-    strip.text = element_text(
-      face = "bold", 
-      hjust = 0.5,
-      vjust = 0.5,
-      lineheight = 0.9
-    ),
-    axis.text.y        = element_blank(),  # hide if crowded
-    panel.spacing      = unit(0.05, "lines"),
-    legend.position    = "bottom",
-    legend.key.size    = unit(0.5, "cm"),
-    legend.text        = ggtext::element_markdown(size = 8),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    panel.ontop        = FALSE
-  )
-
-  
-  print(plot)
-
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 Bracken stacked bar plot of pathogens detected Overall not out of 100 -vertical-ONLY SHARED DATES WITH BIOFILM .png", plot=plot, width=6.5, height=10,dpi = 500)
-  # ggsave(path = "Biofilm Project Figures",file="Kraken CT 0.5 Bracken stacked bar plot of pathogens detected in Overall not out of 100-vertical-ONLY SHARED DATES WITH BIOFILM .svg", plot=plot, width=5, height=9)
-
-
-library(dplyr)
-
-# # Create summary table of percent contribution by pathogen and sample type
-# pathogen_summary <- plot_df %>%
-#   group_by(class, Type) %>%
-#   summarise(
-#     MinPercent = min(rel_ab, na.rm = TRUE) * 100,
-#     MaxPercent = max(rel_ab, na.rm = TRUE) * 100,
-#     MeanPercent = mean(rel_ab, na.rm = TRUE) * 100,
-#     .groups = "drop"
-#   ) %>%
-#   rename(Pathogen = class, SampleType = Type) %>%
-#   arrange(SampleType, desc(MeanPercent))
-# 
-# # View the table
-# pathogen_summary
-
-
-```
-
-
-
 
 
 #16S Data
-##Starter libraries
-```{r}
-#BiocManager::install("decontam")
-#BiocManager::install("DESeq2")
-#BiocManager::install("genefilter")
-#BiocManager::install("phyloseq")
-#install.packages("permute")
-#install.packages("vegan")
-#install.packages("viridis")
-#install.packages("patchwork")
-#install.packages("ComplexUpset")
-#install.packages("ggupset")
-#install.packages("ggstatsplot")
-#install.packages("ggtext")
-#install.packages("forcats")
-#install.packages("ggsignif")
-library(ggsignif)
-library(forcats)
-library(ggtext)
-library(ggstatsplot)
-library(ggupset)
-library(ComplexUpset)
-library(phyloseq); packageVersion("phyloseq")
-library(Biostrings); packageVersion("Biostrings")
-library(genefilter)
-library(vegan); packageVersion("vegan")
-library(DESeq2); packageVersion("DESeq2")
-library(ggplot2)
-library(scales)
-library(dplyr)
-library(tidyverse)
-library(viridis)
-library(patchwork)
-#theme_set(theme_bw())
-```
 ##get data
 ```{r}
 fig_dir <- 'Biofilm Project Figures/'
@@ -6004,1561 +3531,7 @@ pathogens = pathogens_high_prev %>% dplyr::select(Genus) %>% distinct(Genus) %>%
 
 ```
 
-##Core Microbiome Analysis using core microbiome package-Family Level
-```{r}
-#---------Libraries----------------
-library("devtools")
-#install_github("microbiome/microbiome")
-library(microbiome)
 
-#------------Test Phyloseq Object-----------
-# data(peerj32)
-# 
-# # Rename the data
-# pseq_test <- peerj32$phyloseq
-# 
-# # Calculate compositional version of the data
-# # (relative abundances)
-# pseq.rel_test <- microbiome::transform(pseq_test, "compositional")
-# 
-# otu_table(pseq.rel_test)      # abundance matrix
-# tax_table(pseq.rel_test)      # taxonomy
-# sample_data(pseq.rel_test)   # metadata
-
-#------Load Phyloseq Object----------
-
-
-#subset dataset to only sewer biofilm
-ps_sewer_biofilm <- subset_samples(
-  ps,
-  sample_type %in% c("e")
-)
-
-ps_sewer_biofilm <- prune_taxa(
-  taxa_sums(ps_sewer_biofilm) > 0,
-  ps_sewer_biofilm
-)
-
-
-pseq = ps_sewer_biofilm
-
-ps_family <- pseq %>%
-  microbiome::aggregate_taxa("Family")
-
-# Calculate compositional version of the data
-# (relative abundances)
-
-pseq.rel <- microbiome::transform(ps_family, "compositional")
-
-#---------Get Population Frequencies-----------
-
-#Relative population frequencies; at 1% compositional abundance threshold:
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE))
-
-#head(prevalence(pseq.rel_test, detection = 1/100, sort = TRUE))
-
-#Absolute population frequencies (sample count):
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE, count = TRUE))
-
-#If you only need the names of the core taxa, do as follows. This returns the taxa that exceed the given prevalence and detection thresholds
-core.taxa.standard <- core_members(pseq.rel, detection = 0, prevalence = 50/100)
-
-#A full phyloseq object of the core microbiota is obtained as follows:
-pseq.core <- core(pseq.rel, detection = 0, prevalence = .5)
-
-#We can also collapse the rare taxa into an “Other” category
-pseq.core2 <- aggregate_rare(pseq.rel, "Family", detection = 0, prevalence = .5)
-
-#Retrieving the core taxa names from the phyloseq object:
-core.taxa <- taxa(pseq.core)
-
-#Total core abundance in each sample (sum of abundances of the core members):
-#core.abundance <- sample_sums(core(pseq.rel, detection = .01, prevalence = .95))
-
-#----------Core Line Plots-----------
-# With compositional (relative) abundances
-det <- c(0, 0.1, 0.5, 2, 5, 20)/100
-prevalences <- seq(.05, 1, .05)
- #ggplot(d) + geom_point(aes(x, y)) + scale_x_continuous(trans="log10", limits=c(NA,1))
-
-
-plot_core(pseq.rel, 
-          prevalences = prevalences, 
-          detections = det, 
-          plot.type = "lineplot") + 
-  xlab("Relative Abundance (%)")
-
-#----------Core Heat Maps-----------------
-# Core with compositionals:
-library(RColorBrewer)
-library(reshape)
-
-prevalences <- seq(.05, 1, .05)
-
-detections <- round(10^seq(log10(0.01), log10(.2), length = 9), 3);detections
-
-# Also define gray color palette
-gray <- gray(seq(0,1,length=5))
-
-
-#Added pseq.rel, I thin... must be checked if it was in the the rednred version,; where it is initialized
-#pseq.rel<- microbiome::transform(pseq, 'compositional')
-#min-prevalence gets the 100th highest prevalence
-p <- plot_core(pseq.rel,
-               plot.type = "heatmap", 
-               colours = gray,
-               prevalences = prevalences, 
-               detections = detections, 
-               min.prevalence = prevalence(pseq.rel, sort = TRUE)[100]) +
-  labs(x = "Detection Threshold\n(Relative Abundance (%))") +
-    
-  #Adjusts axis text size and legend bar height
-  theme(axis.text.y= element_text(size=8, face="italic"),
-        axis.text.x.bottom=element_text(size=8),
-        axis.title = element_text(size=10),
-        legend.text = element_text(size=8),
-        legend.title = element_text(size=10))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file= "16S family level Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S family level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5)
-
-# -------------Core with absolute counts and horizontal view--------------
-  
-  # Extract genus column from tax_table as a vector
-families <- as.character(tax_table(pseq.rel)[, "Family"])
-
-# Create logical vector: TRUE for known families
-known_families <- !is.na(families) & families != "Unknown" & families != "unclassified" & families != ""
-
-# Prune taxa
-pseq.rel.filtered <- prune_taxa(known_families, pseq.rel)
-
-pseq.rel.filtered <- microbiome::transform(pseq.rel.filtered, "compositional")
-
-
-  
-detections <- seq(from = 50, to = round(max(abundances(pseq)), -1), by = 100); detections
-
-
-      
-detections <- seq(from = 0, to = round(max(abundances(pseq)), -1), by = 10); detections
-
-detections <- seq(from = 50, to = round(max(abundances(pseq))/10, -1), by = 100); detections
-
-#Define prevalence thresholds
-prevalences <- seq(0.05, 1, 0.05)  # 5% to 100%
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               detections = detections,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.2,
-               horizontal = FALSE) +  # Genus on y-axis
-  #scale_x_discrete(labels = detection_labels) +
-  theme(axis.text.x= element_text(size=2, face="italic", hjust=1),
-        axis.text.y= element_text(size=3),
-        axis.title = element_text(size=6),
-        legend.text = element_text(size=5),
-        legend.title = element_text(size=7))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S family level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=7,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S family level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=6)
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-p <- p +
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) signif(as.numeric(x), 2)  # rounds/shortens numbers
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate for readability
-
-
-print(p)
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) 
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) +  # Genus on y-axis
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) {
-      perc <- as.numeric(x)  * 100  # convert to %
-      paste0(round(perc, 1), "%")           # round and add % sign
-    }
-  ) +
-  theme(axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 8),
-        legend.text = element_text(size =8))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S family level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S family level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5)
-
-#----------Get list of genera at prevalence greater than 70% and rel abundance greater than 0.5%-----------
-prev <- prevalence(pseq.rel.filtered, detection = 0.005)  # 0.5%
-
-prev_df <- data.frame(
-  Family = names(prev),
-  Prevalence = prev
-)
-
-pathogens_high_prev <- prev_df %>%
-  dplyr::filter(Prevalence > 0.7)
-
-pathogens = pathogens_high_prev %>% dplyr::select(Family) %>% distinct(Family) %>% pull(Family)
-
-
-```
-
-##Core Microbiome Analysis using core microbiome package-Order Level
-```{r}
-#---------Libraries----------------
-library("devtools")
-#install_github("microbiome/microbiome")
-library(microbiome)
-
-#------------Test Phyloseq Object-----------
-# data(peerj32)
-# 
-# # Rename the data
-# pseq_test <- peerj32$phyloseq
-# 
-# # Calculate compositional version of the data
-# # (relative abundances)
-# pseq.rel_test <- microbiome::transform(pseq_test, "compositional")
-# 
-# otu_table(pseq.rel_test)      # abundance matrix
-# tax_table(pseq.rel_test)      # taxonomy
-# sample_data(pseq.rel_test)   # metadata
-
-#------Load Phyloseq Object----------
-
-
-#subset dataset to only sewer biofilm
-ps_sewer_biofilm <- subset_samples(
-  ps,
-  sample_type %in% c("e")
-)
-
-ps_sewer_biofilm <- prune_taxa(
-  taxa_sums(ps_sewer_biofilm) > 0,
-  ps_sewer_biofilm
-)
-
-
-pseq = ps_sewer_biofilm
-
-ps_order <- pseq %>%
-  microbiome::aggregate_taxa("Order")
-
-# Calculate compositional version of the data
-# (relative abundances)
-
-pseq.rel <- microbiome::transform(ps_order, "compositional")
-
-#---------Get Population Frequencies-----------
-
-#Relative population frequencies; at 1% compositional abundance threshold:
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE))
-
-#head(prevalence(pseq.rel_test, detection = 1/100, sort = TRUE))
-
-#Absolute population frequencies (sample count):
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE, count = TRUE))
-
-#If you only need the names of the core taxa, do as follows. This returns the taxa that exceed the given prevalence and detection thresholds
-core.taxa.standard <- core_members(pseq.rel, detection = 0, prevalence = 50/100)
-
-#A full phyloseq object of the core microbiota is obtained as follows:
-pseq.core <- core(pseq.rel, detection = 0, prevalence = .5)
-
-#We can also collapse the rare taxa into an “Other” category
-pseq.core2 <- aggregate_rare(pseq.rel, "Order", detection = 0, prevalence = .5)
-
-#Retrieving the core taxa names from the phyloseq object:
-core.taxa <- taxa(pseq.core)
-
-#Total core abundance in each sample (sum of abundances of the core members):
-#core.abundance <- sample_sums(core(pseq.rel, detection = .01, prevalence = .95))
-
-#----------Core Line Plots-----------
-# With compositional (relative) abundances
-det <- c(0, 0.1, 0.5, 2, 5, 20)/100
-prevalences <- seq(.05, 1, .05)
- #ggplot(d) + geom_point(aes(x, y)) + scale_x_continuous(trans="log10", limits=c(NA,1))
-
-
-plot_core(pseq.rel, 
-          prevalences = prevalences, 
-          detections = det, 
-          plot.type = "lineplot") + 
-  xlab("Relative Abundance (%)")
-
-#----------Core Heat Maps-----------------
-# Core with compositionals:
-library(RColorBrewer)
-library(reshape)
-
-prevalences <- seq(.05, 1, .05)
-
-detections <- round(10^seq(log10(0.01), log10(.2), length = 9), 3);detections
-
-# Also define gray color palette
-gray <- gray(seq(0,1,length=5))
-
-
-#Added pseq.rel, I thin... must be checked if it was in the the rednred version,; where it is initialized
-#pseq.rel<- microbiome::transform(pseq, 'compositional')
-#min-prevalence gets the 100th highest prevalence
-p <- plot_core(pseq.rel,
-               plot.type = "heatmap", 
-               colours = gray,
-               prevalences = prevalences, 
-               detections = detections, 
-               min.prevalence = prevalence(pseq.rel, sort = TRUE)[100]) +
-  labs(x = "Detection Threshold\n(Relative Abundance (%))") +
-    
-  #Adjusts axis text size and legend bar height
-  theme(axis.text.y= element_text(size=8, face="italic"),
-        axis.text.x.bottom=element_text(size=8),
-        axis.title = element_text(size=10),
-        legend.text = element_text(size=8),
-        legend.title = element_text(size=10))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file= "16S Order level Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S Order level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5)
-
-# -------------Core with absolute counts and horizontal view--------------
-  
-  # Extract genus column from tax_table as a vector
-orders <- as.character(tax_table(pseq.rel)[, "Order"])
-
-# Create logical vector: TRUE for known orders
-known_orders <- !is.na(orders) & orders != "Unknown" & orders != "unclassified" & orders != ""
-
-# Prune taxa
-pseq.rel.filtered <- prune_taxa(known_orders, pseq.rel)
-
-pseq.rel.filtered <- microbiome::transform(pseq.rel.filtered, "compositional")
-
-
-  
-detections <- seq(from = 50, to = round(max(abundances(pseq)), -1), by = 100); detections
-
-
-      
-detections <- seq(from = 0, to = round(max(abundances(pseq)), -1), by = 10); detections
-
-detections <- seq(from = 50, to = round(max(abundances(pseq))/10, -1), by = 100); detections
-
-#Define prevalence thresholds
-prevalences <- seq(0.05, 1, 0.05)  # 5% to 100%
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               detections = detections,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.2,
-               horizontal = FALSE) +  # Order on y-axis
-  #scale_x_discrete(labels = detection_labels) +
-  theme(axis.text.x= element_text(size=2, face="italic", hjust=1),
-        axis.text.y= element_text(size=3),
-        axis.title = element_text(size=6),
-        legend.text = element_text(size=5),
-        legend.title = element_text(size=7))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Order level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=7,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Order level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=6)
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-p <- p +
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) signif(as.numeric(x), 2)  # rounds/shortens numbers
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate for readability
-
-
-print(p)
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) 
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) +  # Genus on y-axis
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) {
-      perc <- as.numeric(x)  * 100  # convert to %
-      paste0(round(perc, 1), "%")           # round and add % sign
-    }
-  ) +
-  theme(axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 8),
-        legend.text = element_text(size =8))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Order level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Order level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5)
-
-#----------Get list of genera at prevalence greater than 70% and rel abundance greater than 0.5%-----------
-prev <- prevalence(pseq.rel.filtered, detection = 0.005)  # 0.5%
-
-prev_df <- data.frame(
-  Order = names(prev),
-  Prevalence = prev
-)
-
-pathogens_high_prev <- prev_df %>%
-  dplyr::filter(Prevalence > 0.7)
-
-pathogens = pathogens_high_prev %>% dplyr::select(Order) %>% distinct(Order) %>% pull(Order)
-
-
-```
-
-##Core Microbiome Analysis using core microbiome package-Class Level
-```{r}
-#---------Libraries----------------
-library("devtools")
-#install_github("microbiome/microbiome")
-library(microbiome)
-
-#------------Test Phyloseq Object-----------
-# data(peerj32)
-# 
-# # Rename the data
-# pseq_test <- peerj32$phyloseq
-# 
-# # Calculate compositional version of the data
-# # (relative abundances)
-# pseq.rel_test <- microbiome::transform(pseq_test, "compositional")
-# 
-# otu_table(pseq.rel_test)      # abundance matrix
-# tax_table(pseq.rel_test)      # taxonomy
-# sample_data(pseq.rel_test)   # metadata
-
-#------Load Phyloseq Object----------
-
-
-#subset dataset to only sewer biofilm
-ps_sewer_biofilm <- subset_samples(
-  ps,
-  sample_type %in% c("e")
-)
-
-ps_sewer_biofilm <- prune_taxa(
-  taxa_sums(ps_sewer_biofilm) > 0,
-  ps_sewer_biofilm
-)
-
-
-pseq = ps_sewer_biofilm
-
-ps_Class <- pseq %>%
-  microbiome::aggregate_taxa("Class")
-
-# Calculate compositional version of the data
-# (relative abundances)
-
-pseq.rel <- microbiome::transform(ps_Class, "compositional")
-
-#---------Get Population Frequencies-----------
-
-#Relative population frequencies; at 1% compositional abundance threshold:
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE))
-
-#head(prevalence(pseq.rel_test, detection = 1/100, sort = TRUE))
-
-#Absolute population frequencies (sample count):
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE, count = TRUE))
-
-#If you only need the names of the core taxa, do as follows. This returns the taxa that exceed the given prevalence and detection thresholds
-core.taxa.standard <- core_members(pseq.rel, detection = 0, prevalence = 50/100)
-
-#A full phyloseq object of the core microbiota is obtained as follows:
-pseq.core <- core(pseq.rel, detection = 0, prevalence = .5)
-
-#We can also collapse the rare taxa into an “Other” category
-pseq.core2 <- aggregate_rare(pseq.rel, "Class", detection = 0, prevalence = .5)
-
-#Retrieving the core taxa names from the phyloseq object:
-core.taxa <- taxa(pseq.core)
-
-#Total core abundance in each sample (sum of abundances of the core members):
-#core.abundance <- sample_sums(core(pseq.rel, detection = .01, prevalence = .95))
-
-#----------Core Line Plots-----------
-# With compositional (relative) abundances
-det <- c(0, 0.1, 0.5, 2, 5, 20)/100
-prevalences <- seq(.05, 1, .05)
- #ggplot(d) + geom_point(aes(x, y)) + scale_x_continuous(trans="log10", limits=c(NA,1))
-
-
-plot_core(pseq.rel, 
-          prevalences = prevalences, 
-          detections = det, 
-          plot.type = "lineplot") + 
-  xlab("Relative Abundance (%)")
-
-#----------Core Heat Maps-----------------
-# Core with compositionals:
-library(RColorBrewer)
-library(reshape)
-
-prevalences <- seq(.05, 1, .05)
-
-detections <- round(10^seq(log10(0.01), log10(.2), length = 9), 3);detections
-
-# Also define gray color palette
-gray <- gray(seq(0,1,length=5))
-
-
-#Added pseq.rel, I thin... must be checked if it was in the the rednred version,; where it is initialized
-#pseq.rel<- microbiome::transform(pseq, 'compositional')
-#min-prevalence gets the 100th highest prevalence
-p <- plot_core(pseq.rel,
-               plot.type = "heatmap", 
-               colours = gray,
-               prevalences = prevalences, 
-               detections = detections, 
-               min.prevalence = prevalence(pseq.rel, sort = TRUE)[100]) +
-  labs(x = "Detection Threshold\n(Relative Abundance (%))") +
-    
-  #Adjusts axis text size and legend bar height
-  theme(axis.text.y= element_text(size=8, face="italic"),
-        axis.text.x.bottom=element_text(size=8),
-        axis.title = element_text(size=10),
-        legend.text = element_text(size=8),
-        legend.title = element_text(size=10))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file= "16S Class level Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S Class level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5)
-
-# -------------Core with absolute counts and horizontal view--------------
-  
-  # Extract genus column from tax_table as a vector
-Classes <- as.character(tax_table(pseq.rel)[, "Class"])
-
-# Create logical vector: TRUE for known Classs
-known_Classes <- !is.na(Classes) & Classes != "Unknown" & Classes != "unclassified" & Classes != ""
-
-# Prune taxa
-pseq.rel.filtered <- prune_taxa(known_Classes, pseq.rel)
-
-pseq.rel.filtered <- microbiome::transform(pseq.rel.filtered, "compositional")
-
-
-  
-detections <- seq(from = 50, to = round(max(abundances(pseq)), -1), by = 100); detections
-
-
-      
-detections <- seq(from = 0, to = round(max(abundances(pseq)), -1), by = 10); detections
-
-detections <- seq(from = 50, to = round(max(abundances(pseq))/10, -1), by = 100); detections
-
-#Define prevalence thresholds
-prevalences <- seq(0.05, 1, 0.05)  # 5% to 100%
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               detections = detections,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.2,
-               horizontal = FALSE) +  # Class on y-axis
-  #scale_x_discrete(labels = detection_labels) +
-  theme(axis.text.x= element_text(size=2, face="italic", hjust=1),
-        axis.text.y= element_text(size=3),
-        axis.title = element_text(size=6),
-        legend.text = element_text(size=5),
-        legend.title = element_text(size=7))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Class level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=7,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Class level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=6)
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-p <- p +
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) signif(as.numeric(x), 2)  # rounds/shortens numbers
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate for readability
-
-
-print(p)
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) 
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) +  # Genus on y-axis
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) {
-      perc <- as.numeric(x)  * 100  # convert to %
-      paste0(round(perc, 1), "%")           # round and add % sign
-    }
-  ) +
-  theme(axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 8),
-        legend.text = element_text(size =8))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Class level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Class level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5)
-
-#----------Get list of genera at prevalence greater than 70% and rel abundance greater than 0.5%-----------
-prev <- prevalence(pseq.rel.filtered, detection = 0.005)  # 0.5%
-
-prev_df <- data.frame(
-  Class = names(prev),
-  Prevalence = prev
-)
-
-pathogens_high_prev <- prev_df %>%
-  dplyr::filter(Prevalence > 0.7)
-
-pathogens = pathogens_high_prev %>% dplyr::select(Class) %>% distinct(Class) %>% pull(Class)
-
-
-```
-
-##Core Microbiome Analysis using core microbiome package-Phylum Level
-```{r}
-#---------Libraries----------------
-library("devtools")
-#install_github("microbiome/microbiome")
-library(microbiome)
-
-#------------Test Phyloseq Object-----------
-# data(peerj32)
-# 
-# # Rename the data
-# pseq_test <- peerj32$phyloseq
-# 
-# # Calculate compositional version of the data
-# # (relative abundances)
-# pseq.rel_test <- microbiome::transform(pseq_test, "compositional")
-# 
-# otu_table(pseq.rel_test)      # abundance matrix
-# tax_table(pseq.rel_test)      # taxonomy
-# sample_data(pseq.rel_test)   # metadata
-
-#------Load Phyloseq Object----------
-
-
-#subset dataset to only sewer biofilm
-ps_sewer_biofilm <- subset_samples(
-  ps,
-  sample_type %in% c("e")
-)
-
-ps_sewer_biofilm <- prune_taxa(
-  taxa_sums(ps_sewer_biofilm) > 0,
-  ps_sewer_biofilm
-)
-
-
-pseq = ps_sewer_biofilm
-
-ps_Phylum <- pseq %>%
-  microbiome::aggregate_taxa("Phylum")
-
-# Calculate compositional version of the data
-# (relative abundances)
-
-pseq.rel <- microbiome::transform(ps_Phylum, "compositional")
-
-#---------Get Population Frequencies-----------
-
-#Relative population frequencies; at 1% compositional abundance threshold:
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE))
-
-#head(prevalence(pseq.rel_test, detection = 1/100, sort = TRUE))
-
-#Absolute population frequencies (sample count):
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE, count = TRUE))
-
-#If you only need the names of the core taxa, do as follows. This returns the taxa that exceed the given prevalence and detection thresholds
-core.taxa.standard <- core_members(pseq.rel, detection = 0, prevalence = 50/100)
-
-#A full phyloseq object of the core microbiota is obtained as follows:
-pseq.core <- core(pseq.rel, detection = 0, prevalence = .5)
-
-#We can also collapse the rare taxa into an “Other” category
-pseq.core2 <- aggregate_rare(pseq.rel, "Phylum", detection = 0, prevalence = .5)
-
-#Retrieving the core taxa names from the phyloseq object:
-core.taxa <- taxa(pseq.core)
-
-#Total core abundance in each sample (sum of abundances of the core members):
-#core.abundance <- sample_sums(core(pseq.rel, detection = .01, prevalence = .95))
-
-#----------Core Line Plots-----------
-# With compositional (relative) abundances
-det <- c(0, 0.1, 0.5, 2, 5, 20)/100
-prevalences <- seq(.05, 1, .05)
- #ggplot(d) + geom_point(aes(x, y)) + scale_x_continuous(trans="log10", limits=c(NA,1))
-
-
-plot_core(pseq.rel, 
-          prevalences = prevalences, 
-          detections = det, 
-          plot.type = "lineplot") + 
-  xlab("Relative Abundance (%)")
-
-#----------Core Heat Maps-----------------
-# Core with compositionals:
-library(RColorBrewer)
-library(reshape)
-
-prevalences <- seq(.05, 1, .05)
-
-detections <- round(10^seq(log10(0.01), log10(.2), length = 9), 3);detections
-
-# Also define gray color palette
-gray <- gray(seq(0,1,length=5))
-
-
-#Added pseq.rel, I thin... must be checked if it was in the the rednred version,; where it is initialized
-#pseq.rel<- microbiome::transform(pseq, 'compositional')
-#min-prevalence gets the 100th highest prevalence
-p <- plot_core(pseq.rel,
-               plot.type = "heatmap", 
-               colours = gray,
-               prevalences = prevalences, 
-               detections = detections, 
-               min.prevalence = prevalence(pseq.rel, sort = TRUE)[100]) +
-  labs(x = "Detection Threshold\n(Relative Abundance (%))") +
-    
-  #Adjusts axis text size and legend bar height
-  theme(axis.text.y= element_text(size=8, face="italic"),
-        axis.text.x.bottom=element_text(size=8),
-        axis.title = element_text(size=10),
-        legend.text = element_text(size=8),
-        legend.title = element_text(size=10))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file= "16S Phylum level Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S Phylum level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5)
-
-# -------------Core with absolute counts and horizontal view--------------
-  
-  # Extract genus column from tax_table as a vector
-Phylums <- as.character(tax_table(pseq.rel)[, "Phylum"])
-
-# Create logical vector: TRUE for known Phylums
-known_Phylums <- !is.na(Phylums) & Phylums != "Unknown" & Phylums != "unclassified" & Phylums != ""
-
-# Prune taxa
-pseq.rel.filtered <- prune_taxa(known_Phylums, pseq.rel)
-
-pseq.rel.filtered <- microbiome::transform(pseq.rel.filtered, "compositional")
-
-
-  
-detections <- seq(from = 50, to = round(max(abundances(pseq)), -1), by = 100); detections
-
-
-      
-detections <- seq(from = 0, to = round(max(abundances(pseq)), -1), by = 10); detections
-
-detections <- seq(from = 50, to = round(max(abundances(pseq))/10, -1), by = 100); detections
-
-#Define prevalence thresholds
-prevalences <- seq(0.05, 1, 0.05)  # 5% to 100%
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               detections = detections,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.2,
-               horizontal = FALSE) +  # Phylum on y-axis
-  #scale_x_discrete(labels = detection_labels) +
-  theme(axis.text.x= element_text(size=2, face="italic", hjust=1),
-        axis.text.y= element_text(size=3),
-        axis.title = element_text(size=6),
-        legend.text = element_text(size=5),
-        legend.title = element_text(size=7))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Phylum level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=7,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Phylum level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=6)
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-p <- p +
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) signif(as.numeric(x), 2)  # rounds/shortens numbers
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate for readability
-
-
-print(p)
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) 
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) +  # Genus on y-axis
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) {
-      perc <- as.numeric(x)  * 100  # convert to %
-      paste0(round(perc, 1), "%")           # round and add % sign
-    }
-  ) +
-  theme(axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 8),
-        legend.text = element_text(size =8))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Phylum level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Phylum level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5)
-
-#----------Get list of genera at prevalence greater than 70% and rel abundance greater than 0.5%-----------
-prev <- prevalence(pseq.rel.filtered, detection = 0.005)  # 0.5%
-
-prev_df <- data.frame(
-  Phylum = names(prev),
-  Prevalence = prev
-)
-
-pathogens_high_prev <- prev_df %>%
-  dplyr::filter(Prevalence > 0.7)
-
-pathogens = pathogens_high_prev %>% dplyr::select(Phylum) %>% distinct(Phylum) %>% pull(Phylum)
-
-
-```
-
-##Core Microbiome Analysis using core microbiome package-Kingdom Level
-```{r}
-#---------Libraries----------------
-library("devtools")
-#install_github("microbiome/microbiome")
-library(microbiome)
-
-#------------Test Phyloseq Object-----------
-# data(peerj32)
-# 
-# # Rename the data
-# pseq_test <- peerj32$phyloseq
-# 
-# # Calculate compositional version of the data
-# # (relative abundances)
-# pseq.rel_test <- microbiome::transform(pseq_test, "compositional")
-# 
-# otu_table(pseq.rel_test)      # abundance matrix
-# tax_table(pseq.rel_test)      # taxonomy
-# sample_data(pseq.rel_test)   # metadata
-
-#------Load Phyloseq Object----------
-
-
-#subset dataset to only sewer biofilm
-ps_sewer_biofilm <- subset_samples(
-  ps,
-  sample_type %in% c("e")
-)
-
-ps_sewer_biofilm <- prune_taxa(
-  taxa_sums(ps_sewer_biofilm) > 0,
-  ps_sewer_biofilm
-)
-
-
-pseq = ps_sewer_biofilm
-
-ps_Kingdom <- pseq %>%
-  microbiome::aggregate_taxa("Kingdom")
-
-# Calculate compositional version of the data
-# (relative abundances)
-
-pseq.rel <- microbiome::transform(ps_Kingdom, "compositional")
-
-#---------Get Population Frequencies-----------
-
-#Relative population frequencies; at 1% compositional abundance threshold:
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE))
-
-#head(prevalence(pseq.rel_test, detection = 1/100, sort = TRUE))
-
-#Absolute population frequencies (sample count):
-head(prevalence(pseq.rel, detection = 1/100, sort = TRUE, count = TRUE))
-
-#If you only need the names of the core taxa, do as follows. This returns the taxa that exceed the given prevalence and detection thresholds
-core.taxa.standard <- core_members(pseq.rel, detection = 0, prevalence = 50/100)
-
-#A full phyloseq object of the core microbiota is obtained as follows:
-pseq.core <- core(pseq.rel, detection = 0, prevalence = .5)
-
-#We can also collapse the rare taxa into an “Other” category
-pseq.core2 <- aggregate_rare(pseq.rel, "Kingdom", detection = 0, prevalence = .5)
-
-#Retrieving the core taxa names from the phyloseq object:
-core.taxa <- taxa(pseq.core)
-
-#Total core abundance in each sample (sum of abundances of the core members):
-#core.abundance <- sample_sums(core(pseq.rel, detection = .01, prevalence = .95))
-
-#----------Core Line Plots-----------
-# With compositional (relative) abundances
-det <- c(0, 0.1, 0.5, 2, 5, 20)/100
-prevalences <- seq(.05, 1, .05)
- #ggplot(d) + geom_point(aes(x, y)) + scale_x_continuous(trans="log10", limits=c(NA,1))
-
-
-plot_core(pseq.rel, 
-          prevalences = prevalences, 
-          detections = det, 
-          plot.type = "lineplot") + 
-  xlab("Relative Abundance (%)")
-
-#----------Core Heat Maps-----------------
-# Core with compositionals:
-library(RColorBrewer)
-library(reshape)
-
-prevalences <- seq(.05, 1, .05)
-
-detections <- round(10^seq(log10(0.01), log10(.2), length = 9), 3);detections
-
-# Also define gray color palette
-gray <- gray(seq(0,1,length=5))
-
-
-#Added pseq.rel, I thin... must be checked if it was in the the rednred version,; where it is initialized
-#pseq.rel<- microbiome::transform(pseq, 'compositional')
-#min-prevalence gets the 100th highest prevalence
-p <- plot_core(pseq.rel,
-               plot.type = "heatmap", 
-               colours = gray,
-               prevalences = prevalences, 
-               detections = detections, 
-               min.prevalence = prevalence(pseq.rel, sort = TRUE)[100]) +
-  labs(x = "Detection Threshold\n(Relative Abundance (%))") +
-    
-  #Adjusts axis text size and legend bar height
-  theme(axis.text.y= element_text(size=8, face="italic"),
-        axis.text.x.bottom=element_text(size=8),
-        axis.title = element_text(size=10),
-        legend.text = element_text(size=8),
-        legend.title = element_text(size=10))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file= "16S Kingdom level Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S Kingdom level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-Top Taxa.png", plot=p, width=5, height=4.5)
-
-# -------------Core with absolute counts and horizontal view--------------
-  
-  # Extract genus column from tax_table as a vector
-Kingdoms <- as.character(tax_table(pseq.rel)[, "Kingdom"])
-
-# Create logical vector: TRUE for known Kingdoms
-known_Kingdoms <- !is.na(Kingdoms) & Kingdoms != "Unknown" & Kingdoms != "unclassified" & Kingdoms != ""
-
-# Prune taxa
-pseq.rel.filtered <- prune_taxa(known_Kingdoms, pseq.rel)
-
-pseq.rel.filtered <- microbiome::transform(pseq.rel.filtered, "compositional")
-
-
-  
-detections <- seq(from = 50, to = round(max(abundances(pseq)), -1), by = 100); detections
-
-
-      
-detections <- seq(from = 0, to = round(max(abundances(pseq)), -1), by = 10); detections
-
-detections <- seq(from = 50, to = round(max(abundances(pseq))/10, -1), by = 100); detections
-
-#Define prevalence thresholds
-prevalences <- seq(0.05, 1, 0.05)  # 5% to 100%
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               detections = detections,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.2,
-               horizontal = FALSE) +  # Kingdom on y-axis
-  #scale_x_discrete(labels = detection_labels) +
-  theme(axis.text.x= element_text(size=2, face="italic", hjust=1),
-        axis.text.y= element_text(size=3),
-        axis.title = element_text(size=6),
-        legend.text = element_text(size=5),
-        legend.title = element_text(size=7))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Kingdom level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=7,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Kingdom level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-old plot--All Taxa.png", plot=p, width=5, height=6)
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-p <- p +
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) signif(as.numeric(x), 2)  # rounds/shortens numbers
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # rotate for readability
-
-
-print(p)
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) 
-
-x_levels <- levels(p$data$Detection);x_levels
-
-x_labels <- x_levels[round(seq(1, length(x_levels), length.out = 6))]
-
-max_det <- max(as.numeric(levels(p$data$Detection)))
-
-p <- plot_core(pseq.rel.filtered, 
-               plot.type = "heatmap",
-               prevalences = prevalences,
-               #detections = detections,
-               detections = 20,
-               colours = rev(brewer.pal(5, "Spectral")),
-               min.prevalence = 0.5,
-               horizontal = FALSE) +  # Genus on y-axis
-  scale_x_discrete(
-    breaks = x_labels,
-    labels = function(x) {
-      perc <- as.numeric(x)  * 100  # convert to %
-      paste0(round(perc, 1), "%")           # round and add % sign
-    }
-  ) +
-  theme(axis.text.x = element_text(size = 7),
-        axis.text.y = element_text(size = 8),
-        legend.text = element_text(size =8))
-
-print(p)
-
-ggsave(path = "Biofilm Project Figures",file="16S Kingdom level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5,dpi = 400)
-ggsave(path = "Biofilm Project Figures",file="16S Kingdom level-Amplicon based Core Microbiome Heat map of Sewer Biofilm-All Taxa.png", plot=p, width=5, height=5)
-
-#----------Get list of genera at prevalence greater than 70% and rel abundance greater than 0.5%-----------
-prev <- prevalence(pseq.rel.filtered, detection = 0.005)  # 0.5%
-
-prev_df <- data.frame(
-  Kingdom = names(prev),
-  Prevalence = prev
-)
-
-pathogens_high_prev <- prev_df %>%
-  dplyr::filter(Prevalence > 0.7)
-
-pathogens = pathogens_high_prev %>% dplyr::select(Kingdom) %>% distinct(Kingdom) %>% pull(Kingdom)
-
-
-```
-
-##Only Sewer Biofilm Stacked bars using 16S data (facet nested by Location and Type) top 44 genera by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
-```{r}
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-# Assuming 'metaphlan_output' is your MetaPhlAn data frame
-
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-library(viridis)
-library(ggh4x)
-
-# ---------- STEP 1: Extract and clean ----------
-
-library(phyloseq)
-library(microbiome)
-library(dplyr)
-library(tidyr)
-
-sample_data(ps)$sample_type <- as.character(sample_data(ps)$sample_type)
-ps_by_type <- merge_samples(ps, "sample_type")
-
-sample_data(ps_by_type)$sample_type <- sample_names(ps_by_type)
-ps_by_type_genus <- tax_glom(ps_by_type, taxrank = "Genus")
-ps_by_type_genus_perc <- transform_sample_counts(ps_by_type_genus, function(x) 100 * x / sum(x)) #converts counts to percentages per sample (relative abundance).
-
-ps_sample_filt1.2 <- filter_taxa(ps_by_type_genus_perc, filterfun(kOverA(1, 2)), TRUE) #keep taxa with ≥2% abundance in at least 1 sample.
-
-#df_long <- psmelt(ps_sample_filt1.2)  # creates data.frame with OTU abundances + metadata
-
-library(reshape2)
-
-df_long <- psmelt(ps) %>%  # creates data.frame with OTU abundances + metadata
-
-  dplyr::select(OTU,Sample,Abundance,sample_id,sample_type,sample_date,timepoint,corresponding_sewer,sub_timepoint,qubit_DNA_ng.uL,Kingdom,Phylum,Class, Order, Family, Genus, Species) %>% distinct %>% 
-  dplyr::rename("SampleID" = "sample_id",
-                "Type" = "sample_type",
-                "Location" = "corresponding_sewer",
-                "Date" = "sample_date") %>% 
-  mutate(Date = as.Date(as.character(Date), format = "%m/%d/%y"),
-        # Make Date a string in MM/DD/YYYY format
-        Abundance = as.numeric(Abundance),
-        DateString = format(as.Date(Date), "%m/%d/%Y"),
-        Month = format(as.Date(Date), "%m-%Y")) %>% 
-  
-  group_by(SampleID) %>%     
-  mutate(total_ab = sum(Abundance)) %>% 
-  ungroup() %>% 
-  
-  group_by(SampleID,Type, OTU) %>%              # group by sample
-  mutate(rel_ab = Abundance / total_ab) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  dplyr::select(-Abundance)
-
-# Columns: Sample, OTU, Abundance, taxonomy ranks, sample_data columns
-
-
-# ---------- New Way: Assign letters time points ----------
-drain_samples <- df_long %>%
-  filter(Type == "d") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for sewer biofilm replicates ----------
-sewer_samples  <- df_long %>%
-  filter(Type == "e") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint, "-",sub_timepoint,"-", SampleLetter)
-         #NewDateString = timepoint
-) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for ww replicates ----------
-ww_samples  <- df_long %>%
-  filter(Type == "w") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-        ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for tap replicates ----------
-tap_samples  <- df_long %>%
-  mutate(sub_timepoint = as.character(sub_timepoint)) %>%   # ← CRITICAL
-  mutate(sub_timepoint = ifelse(is.na(sub_timepoint), "x", sub_timepoint)) %>%
-  filter(Type == "tap") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-         ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# Combine drain and sewer samples
-replicate_samples <- bind_rows(
-  drain_samples,
-  ww_samples,
-  tap_samples,
-  sewer_samples %>% dplyr::select(SampleID, Location, DateString, Type, NewDateString)
-)
-
-# ---------- Join back to main dataframe ----------
-df_update <- df_long %>%
-  left_join(replicate_samples, by = c("SampleID", "Location", "DateString", "Type")) %>%
-  mutate(
-    NewDateString = ifelse(is.na(NewDateString) == TRUE, DateString, NewDateString)
-  )
-
-
-# ---------- Collapse into top species ----------
-
-n_genus = 44
-
-# get top globally by total rel_ab
-top_genera <- df_update %>%
-  group_by(Genus) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>% 
-  slice_head(n = n_genus) %>% 
-  pull(Genus)
-
-# assign species or "Other"
-plot_df <- df_update %>%
-  dplyr::select(Genus, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Genus %in% top_genera, Genus, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-# ---------- Colors for Plot ----------
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting-----------
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-genera_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = genera_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 1))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-  ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of genera detected.png", plot=plot, width=12, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of genera detected.svg", plot=plot, width=12, height=6)
-  
-#---------------Isolate to only Genera in Sewer Biofilm------------------
-
-#Collapse into top species
-
-n_genus = 44
-  
-df_sewer_biofilm = df_update %>% filter(Type == "e")
-
-# get top globally by total rel_ab
-top_genera <- df_sewer_biofilm %>%
-  group_by(Genus) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_genus) %>%
-  pull(Genus)
-
-# assign species or "Other"
-plot_df <- df_sewer_biofilm %>%
-  dplyr::select(Genus, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Genus %in% top_genera, Genus, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-#Colors for Plot
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-genera_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-library(scales)  # for percent_format()
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = genera_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill = guide_legend(ncol = 2))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of genera detected-only sewer biofilm.png", plot=plot, width=6, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of genera detected-only sewer biofilm.svg", plot=plot, width=6, height=6)
-  
-
-  
-  #-------------Create summary table of percent contribution by pathogen and sample type------------------
-genera_summary <- plot_df %>%
-  group_by(class, Type) %>%
-  summarise(
-    MinPercent = min(rel_ab, na.rm = TRUE) * 100,
-    MaxPercent = max(rel_ab, na.rm = TRUE) * 100,
-    MeanPercent = mean(rel_ab, na.rm = TRUE) * 100,
-    MedianPercent = median(rel_ab, na.rm = TRUE) * 100,
-    .groups = "drop"
-  ) %>%
-  dplyr::rename(Genus = class, SampleType = Type) %>%
-  arrange(SampleType, desc(MeanPercent))
-
-
-```
 
 ##Only Sewer Biofilm Stacked bars using 16S data COLLAPSED ACROSS TIME top 44 genera by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
 ```{r}
@@ -8110,7 +4083,7 @@ plot_df <- df_update %>%
                               Location == "OSCAR" ~ "Site 5",
                               .default = Location)) %>% 
   
-  mutate(Type = recode(Type,
+  mutate(Type = dplyr::recode(Type,
                        "Sink Biofilm" = "Sink\nBiofilm",
                        "Sewer Biofilm" = "Sewer\nBiofilm"))
 
@@ -8229,7 +4202,7 @@ plot_df <- df_sewer_biofilm %>%
                               Location == "OSCAR" ~ "Site 5",
                               .default = Location)) %>% 
   
-  mutate(Type = recode(Type,
+  mutate(Type = dplyr::recode(Type,
                        "Sink Biofilm" = "Sink\nBiofilm",
                        "Sewer Biofilm" = "Sewer\nBiofilm"))
 
@@ -8326,1152 +4299,6 @@ family_summary <- plot_df %>%
     .groups = "drop"
   ) %>%
   dplyr::rename(Family = class, SampleType = Type) %>%
-  arrange(SampleType, desc(MeanPercent))
-
-
-```
-
-
-
-
-
-
-##Only Sewer Biofilm Stacked bars using 16S data (facet nested by Location and Type) top 44 Orders by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
-```{r}
-
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-# Assuming 'metaphlan_output' is your MetaPhlAn data frame
-
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-library(viridis)
-library(ggh4x)
-
-# ---------- STEP 1: Extract and clean ----------
-
-library(phyloseq)
-library(microbiome)
-library(dplyr)
-library(tidyr)
-
-sample_data(ps)$sample_type <- as.character(sample_data(ps)$sample_type)
-ps_by_type <- merge_samples(ps, "sample_type")
-
-sample_data(ps_by_type)$sample_type <- sample_names(ps_by_type)
-ps_by_type_genus <- tax_glom(ps_by_type, taxrank = "Genus")
-ps_by_type_genus_perc <- transform_sample_counts(ps_by_type_genus, function(x) 100 * x / sum(x)) #converts counts to percentages per sample (relative abundance).
-
-ps_sample_filt1.2 <- filter_taxa(ps_by_type_genus_perc, filterfun(kOverA(1, 2)), TRUE) #keep taxa with ≥2% abundance in at least 1 sample.
-
-#df_long <- psmelt(ps_sample_filt1.2)  # creates data.frame with OTU abundances + metadata
-
-library(reshape2)
-
-df_long <- psmelt(ps) %>%  # creates data.frame with OTU abundances + metadata
-
-  dplyr::select(OTU,Sample,Abundance,sample_id,sample_type,sample_date,timepoint,corresponding_sewer,sub_timepoint,qubit_DNA_ng.uL,Kingdom,Phylum,Class, Order, Family, Genus, Species) %>% distinct %>% 
-  dplyr::rename("SampleID" = "sample_id",
-                "Type" = "sample_type",
-                "Location" = "corresponding_sewer",
-                "Date" = "sample_date") %>% 
-  mutate(Date = as.Date(as.character(Date), format = "%m/%d/%y"),
-        # Make Date a string in MM/DD/YYYY format
-        Abundance = as.numeric(Abundance),
-        DateString = format(as.Date(Date), "%m/%d/%Y"),
-        Month = format(as.Date(Date), "%m-%Y")) %>% 
-  
-  group_by(SampleID) %>%              # group by sample
-  mutate(total_ab = sum(Abundance)) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  group_by(SampleID,Type, OTU) %>%              # group by sample
-  mutate(rel_ab = Abundance / total_ab) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  dplyr::select(-Abundance)
-
-# Columns: Sample, OTU, Abundance, taxonomy ranks, sample_data columns
-
-
-# ---------- New Way: Assign letters time points ----------
-drain_samples <- df_long %>%
-  filter(Type == "d") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for sewer biofilm replicates ----------
-sewer_samples  <- df_long %>%
-  filter(Type == "e") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint, "-",sub_timepoint,"-", SampleLetter)
-         #NewDateString = timepoint
-) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for ww replicates ----------
-ww_samples  <- df_long %>%
-  filter(Type == "w") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-        ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for tap replicates ----------
-tap_samples  <- df_long %>%
-  mutate(sub_timepoint = as.character(sub_timepoint)) %>%   # ← CRITICAL
-  mutate(sub_timepoint = ifelse(is.na(sub_timepoint), "x", sub_timepoint)) %>%
-  filter(Type == "tap") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-         ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# Combine drain and sewer samples
-replicate_samples <- bind_rows(
-  drain_samples,
-  ww_samples,
-  tap_samples,
-  sewer_samples %>% dplyr::select(SampleID, Location, DateString, Type, NewDateString)
-)
-
-# ---------- Join back to main dataframe ----------
-df_update <- df_long %>%
-  left_join(replicate_samples, by = c("SampleID", "Location", "DateString", "Type")) %>%
-  mutate(
-    NewDateString = ifelse(is.na(NewDateString) == TRUE, DateString, NewDateString)
-  )
-
-
-# ---------- Collapse into top species ----------
-
-n_order = 44
-
-# get top 25 globally by total rel_ab
-top_order <- df_update %>%
-  group_by(Order) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_order) %>%
-  pull(Order)
-
-# assign species or "Other"
-plot_df <- df_update %>%
-  dplyr::select(Order, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Order %in% top_order, Order, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-# ---------- Colors for Plot ----------
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting-----------
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-genera_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = genera_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 1))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-  ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of Orders detected.png", plot=plot, width=12, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of Orders detected.svg", plot=plot, width=12, height=6)
-  
-#---------------Isolate to only Genera in Sewer Biofilm------------------
-
-#Collapse into top species
-
-n_order = 44
-  
-df_sewer_biofilm = df_update %>% filter(Type == "e")
-
-# get top globally by total rel_ab
-top_order <- df_sewer_biofilm %>%
-  group_by(Order) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_order) %>%
-  pull(Order)
-
-# assign species or "Other"
-plot_df <- df_sewer_biofilm %>%
-  dplyr::select(Order, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Order %in% top_order, Order, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-#Colors for Plot
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-order_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-library(scales)  # for percent_format()
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = order_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill = guide_legend(ncol = 2))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of orders detected-only sewer biofilm.png", plot=plot, width=6, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of orders detected-only sewer biofilm.svg", plot=plot, width=6, height=6)
-  
-
-  
-  #-------------Create summary table of percent contribution by pathogen and sample type------------------
-order_summary <- plot_df %>%
-  group_by(class, Type) %>%
-  summarise(
-    MinPercent = min(rel_ab, na.rm = TRUE) * 100,
-    MaxPercent = max(rel_ab, na.rm = TRUE) * 100,
-    MeanPercent = mean(rel_ab, na.rm = TRUE) * 100,
-    MedianPercent = median(rel_ab, na.rm = TRUE) * 100,
-    .groups = "drop"
-  ) %>%
-  dplyr::rename(Order = class, SampleType = Type) %>%
-  arrange(SampleType, desc(MeanPercent))
-
-
-```
-
-
-
-
-
-
-##Only Sewer Biofilm Stacked bars using 16S data (facet nested by Location and Type) top 44 Classes by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
-```{r}
-
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-# Assuming 'metaphlan_output' is your MetaPhlAn data frame
-
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-library(viridis)
-library(ggh4x)
-
-# ---------- STEP 1: Extract and clean ----------
-
-library(phyloseq)
-library(microbiome)
-library(dplyr)
-library(tidyr)
-
-sample_data(ps)$sample_type <- as.character(sample_data(ps)$sample_type)
-ps_by_type <- merge_samples(ps, "sample_type")
-
-sample_data(ps_by_type)$sample_type <- sample_names(ps_by_type)
-ps_by_type_genus <- tax_glom(ps_by_type, taxrank = "Genus")
-ps_by_type_genus_perc <- transform_sample_counts(ps_by_type_genus, function(x) 100 * x / sum(x)) #converts counts to percentages per sample (relative abundance).
-
-ps_sample_filt1.2 <- filter_taxa(ps_by_type_genus_perc, filterfun(kOverA(1, 2)), TRUE) #keep taxa with ≥2% abundance in at least 1 sample.
-
-#df_long <- psmelt(ps_sample_filt1.2)  # creates data.frame with OTU abundances + metadata
-
-library(reshape2)
-
-df_long <- psmelt(ps) %>%  # creates data.frame with OTU abundances + metadata
-
-  dplyr::select(OTU,Sample,Abundance,sample_id,sample_type,sample_date,timepoint,corresponding_sewer,sub_timepoint,qubit_DNA_ng.uL,Kingdom,Phylum,Class, Order, Family, Genus, Species) %>% distinct %>% 
-  dplyr::rename("SampleID" = "sample_id",
-                "Type" = "sample_type",
-                "Location" = "corresponding_sewer",
-                "Date" = "sample_date") %>% 
-  mutate(Date = as.Date(as.character(Date), format = "%m/%d/%y"),
-        # Make Date a string in MM/DD/YYYY format
-        Abundance = as.numeric(Abundance),
-        DateString = format(as.Date(Date), "%m/%d/%Y"),
-        Month = format(as.Date(Date), "%m-%Y")) %>% 
-  
-  group_by(SampleID) %>%              # group by sample
-  mutate(total_ab = sum(Abundance)) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  group_by(SampleID,Type, OTU) %>%              # group by sample
-  mutate(rel_ab = Abundance / total_ab) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  dplyr::select(-Abundance)
-
-# Columns: Sample, OTU, Abundance, taxonomy ranks, sample_data columns
-
-
-# ---------- New Way: Assign letters time points ----------
-drain_samples <- df_long %>%
-  filter(Type == "d") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for sewer biofilm replicates ----------
-sewer_samples  <- df_long %>%
-  filter(Type == "e") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint, "-",sub_timepoint,"-", SampleLetter)
-         #NewDateString = timepoint
-) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for ww replicates ----------
-ww_samples  <- df_long %>%
-  filter(Type == "w") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-        ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for tap replicates ----------
-tap_samples  <- df_long %>%
-  mutate(sub_timepoint = as.character(sub_timepoint)) %>%   # ← CRITICAL
-  mutate(sub_timepoint = ifelse(is.na(sub_timepoint), "x", sub_timepoint)) %>%
-  filter(Type == "tap") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-         ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# Combine drain and sewer samples
-replicate_samples <- bind_rows(
-  drain_samples,
-  ww_samples,
-  tap_samples,
-  sewer_samples %>% dplyr::select(SampleID, Location, DateString, Type, NewDateString)
-)
-
-# ---------- Join back to main dataframe ----------
-df_update <- df_long %>%
-  left_join(replicate_samples, by = c("SampleID", "Location", "DateString", "Type")) %>%
-  mutate(
-    NewDateString = ifelse(is.na(NewDateString) == TRUE, DateString, NewDateString)
-  )
-
-
-# ---------- Collapse into top species ----------
-
-n_class = 44
-
-# get top 25 globally by total rel_ab
-top_class <- df_update %>%
-  group_by(Class) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_class) %>%
-  pull(Class)
-
-# assign species or "Other"
-plot_df <- df_update %>%
-  dplyr::select(Class, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Class %in% top_class, Class, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-# ---------- Colors for Plot ----------
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting-----------
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-class_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = class_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 1))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-  ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of Classes detected.png", plot=plot, width=12, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of Classes detected.svg", plot=plot, width=12, height=6)
-  
-#---------------Isolate to only Genera in Sewer Biofilm------------------
-
-#Collapse into top species
-
-n_class = 44
-  
-df_sewer_biofilm = df_update %>% filter(Type == "e")
-
-# get top globally by total rel_ab
-top_class <- df_sewer_biofilm %>%
-  group_by(Class) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_class) %>%
-  pull(Class)
-
-# assign species or "Other"
-plot_df <- df_sewer_biofilm %>%
-  dplyr::select(Class, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Class %in% top_class, Class, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-#Colors for Plot
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-class_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-library(scales)  # for percent_format()
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = class_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill = guide_legend(ncol = 2))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of Classes detected-only sewer biofilm.png", plot=plot, width=6, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of classes detected-only sewer biofilm.svg", plot=plot, width=6, height=6)
-  
-
-  
-  #-------------Create summary table of percent contribution by pathogen and sample type------------------
-class_summary <- plot_df %>%
-  group_by(class, Type) %>%
-  summarise(
-    MinPercent = min(rel_ab, na.rm = TRUE) * 100,
-    MaxPercent = max(rel_ab, na.rm = TRUE) * 100,
-    MeanPercent = mean(rel_ab, na.rm = TRUE) * 100,
-    MedianPercent = median(rel_ab, na.rm = TRUE) * 100,
-    .groups = "drop"
-  ) %>%
-  dplyr::rename(Class = class, SampleType = Type) %>%
-  arrange(SampleType, desc(MeanPercent))
-
-
-```
-
-
-
-
-
-
-##Only Sewer Biofilm Stacked bars using 16S data (facet nested by Location and Type) top 44 Phylums by mean relative abundance colored) -- x axis is unique sample type and date combination as row numbers -WITH UPDATED DATE CLASSIFICATION BY TIMEPOINT
-```{r}
-
-#specify dates
-dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
-
-
-# Specify locations to include
-locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
-# Assuming 'metaphlan_output' is your MetaPhlAn data frame
-
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-library(viridis)
-library(ggh4x)
-
-# ---------- STEP 1: Extract and clean ----------
-
-library(phyloseq)
-library(microbiome)
-library(dplyr)
-library(tidyr)
-
-sample_data(ps)$sample_type <- as.character(sample_data(ps)$sample_type)
-ps_by_type <- merge_samples(ps, "sample_type")
-
-sample_data(ps_by_type)$sample_type <- sample_names(ps_by_type)
-ps_by_type_genus <- tax_glom(ps_by_type, taxrank = "Genus")
-ps_by_type_genus_perc <- transform_sample_counts(ps_by_type_genus, function(x) 100 * x / sum(x)) #converts counts to percentages per sample (relative abundance).
-
-ps_sample_filt1.2 <- filter_taxa(ps_by_type_genus_perc, filterfun(kOverA(1, 2)), TRUE) #keep taxa with ≥2% abundance in at least 1 sample.
-
-#df_long <- psmelt(ps_sample_filt1.2)  # creates data.frame with OTU abundances + metadata
-
-library(reshape2)
-
-df_long <- psmelt(ps) %>%  # creates data.frame with OTU abundances + metadata
-
-  dplyr::select(OTU,Sample,Abundance,sample_id,sample_type,sample_date,timepoint,corresponding_sewer,sub_timepoint,qubit_DNA_ng.uL,Kingdom,Phylum,Class, Order, Family, Genus, Species) %>% distinct %>% 
-  dplyr::rename("SampleID" = "sample_id",
-                "Type" = "sample_type",
-                "Location" = "corresponding_sewer",
-                "Date" = "sample_date") %>% 
-  mutate(Date = as.Date(as.character(Date), format = "%m/%d/%y"),
-        # Make Date a string in MM/DD/YYYY format
-        Abundance = as.numeric(Abundance),
-        DateString = format(as.Date(Date), "%m/%d/%Y"),
-        Month = format(as.Date(Date), "%m-%Y")) %>% 
-  
-  group_by(SampleID) %>%              # group by sample
-  mutate(total_ab = sum(Abundance)) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  group_by(SampleID,Type, OTU) %>%              # group by sample
-  mutate(rel_ab = Abundance / total_ab) %>%  # convert counts to relative abundance (0-1)
-  ungroup() %>% 
-  
-  dplyr::select(-Abundance)
-
-# Columns: Sample, OTU, Abundance, taxonomy ranks, sample_data columns
-
-
-# ---------- New Way: Assign letters time points ----------
-drain_samples <- df_long %>%
-  filter(Type == "d") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for sewer biofilm replicates ----------
-sewer_samples  <- df_long %>%
-  filter(Type == "e") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint, "-",sub_timepoint,"-", SampleLetter)
-         #NewDateString = timepoint
-) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for ww replicates ----------
-ww_samples  <- df_long %>%
-  filter(Type == "w") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-        ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# ---------- Assign letters for tap replicates ----------
-tap_samples  <- df_long %>%
-  mutate(sub_timepoint = as.character(sub_timepoint)) %>%   # ← CRITICAL
-  mutate(sub_timepoint = ifelse(is.na(sub_timepoint), "x", sub_timepoint)) %>%
-  filter(Type == "tap") %>%
-  distinct(Location, DateString, Type,SampleID,timepoint,sub_timepoint) %>% 
-  group_by(Location, timepoint,sub_timepoint) %>%
-  mutate(SampleLetter = seq_len(n()),
-         NewDateString = paste0(timepoint,"-",sub_timepoint, "-", SampleLetter)
-          #NewDateString = timepoint
-         ) %>%
-  ungroup() %>%
-  dplyr::select(SampleID,Location, DateString, Type, NewDateString)
-
-# Combine drain and sewer samples
-replicate_samples <- bind_rows(
-  drain_samples,
-  ww_samples,
-  tap_samples,
-  sewer_samples %>% dplyr::select(SampleID, Location, DateString, Type, NewDateString)
-)
-
-# ---------- Join back to main dataframe ----------
-df_update <- df_long %>%
-  left_join(replicate_samples, by = c("SampleID", "Location", "DateString", "Type")) %>%
-  mutate(
-    NewDateString = ifelse(is.na(NewDateString) == TRUE, DateString, NewDateString)
-  )
-
-
-# ---------- Collapse into top species ----------
-
-n_phylum = 44
-
-# get top 25 globally by total rel_ab
-top_phylum <- df_update %>%
-  group_by(Phylum) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_phylum) %>%
-  pull(Phylum)
-
-# assign species or "Other"
-plot_df <- df_update %>%
-  dplyr::select(Phylum, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Phylum %in% top_phylum, Phylum, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-# ---------- Colors for Plot ----------
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting-----------
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-phylum_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-
-library(scales)  # for percent_format()
-
-
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = phylum_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill  = guide_legend(ncol = 1))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-  ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of Phylum detected.png", plot=plot, width=12, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of Phylum detected.svg", plot=plot, width=12, height=6)
-  
-#---------------Isolate to only Genera in Sewer Biofilm------------------
-
-#Collapse into top species
-
-n_phylum = 44
-  
-df_sewer_biofilm = df_update %>% filter(Type == "e")
-
-# get top globally by total rel_ab
-top_phylum <- df_sewer_biofilm %>%
-  group_by(Phylum) %>%
-  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(total_ab)) %>%
-  slice_head(n = n_phylum) %>%
-  pull(Phylum)
-
-# assign species or "Other"
-plot_df <- df_sewer_biofilm %>%
-  dplyr::select(Phylum, SampleID, Date, Location, Type, rel_ab,timepoint,NewDateString) %>%
-  mutate(
-    Type = case_when(
-      Type == "w"   ~ "Wastewater",
-      Type == "e" ~ "Sewer Biofilm",
-      Type == "d"  ~ "Sink Biofilm",
-      Type == "tap" ~ "Tap", 
-      .default = Type
-    ),
-    class = factor(ifelse(Phylum %in% top_phylum, Phylum, "Other")),
-    Type  = factor(Type, levels = c("Wastewater", "Sewer Biofilm","Sink Biofilm","Tap"))
-  ) %>% 
-  
-  # now replace Site names 
-  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
-                              Location == "FIONA" ~ "Site 2",
-                              Location == "LUIGI" ~ "Site 3",
-                              Location == "SHREK" ~ "Site 4",
-                              Location == "OSCAR" ~ "Site 5",
-                              .default = Location)) %>% 
-  
-  mutate(Type = recode(Type,
-                       "Sink Biofilm" = "Sink\nBiofilm",
-                       "Sewer Biofilm" = "Sewer\nBiofilm"))
-
-#Colors for Plot
-
-# Assign colors: first 15 get a palette, "Other" gets grey
-ref = "Other"
-myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
-names(myColors) <- levels(plot_df$class)
-myColors[names(myColors)==ref] <- "grey"
-
-
-##actual plotting
-library(dplyr)
-library(ggplot2)
-library(ggh4x)
-library(ggtext)   # for element_markdown
-
-
-# italicize legend labels
-phylum_labels <- setNames(
-  ifelse(levels(plot_df$class) == "Other",
-         "Other",
-         paste0("*", levels(plot_df$class), "*")),   # markdown italics
-  levels(plot_df$class)
-)
-
-
-# Plot using Event (factor) on x → no gaps within each facet
-
-library(scales)  # for percent_format()
-
-
-plot = ggplot(plot_df, aes(x = NewDateString, y = rel_ab, fill = class)) +
-  geom_col(position = "stack") +
-  facet_nested(Location ~ Type, scales = "free_x", space = "free_x", switch = "y") +
-  scale_fill_manual(values = myColors,
-                    labels = phylum_labels) +
-  # scale_y_continuous(
-  #   breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
-  #   labels = c("0","25", "50", "75"),   # plain numbers, no %
-  #   limits = c(0, 1)                 # optional: keep to 100%
-  # ) +
-  labs(x = NULL, y = "Relative Abundance", fill = "", title = "") +
-theme_minimal(base_size = 11) +
-  guides(fill = guide_legend(ncol = 2))+
-theme(
-  panel.background = element_rect(fill = "white", colour = "black"),
-  strip.background = element_rect(fill = "white", colour = "black"),
-  strip.text = element_text(
-    face = "bold", 
-    hjust = 0.5,          # center horizontally
-    vjust = 0.5,          # center vertically
-    lineheight = 0.9      # tighter line spacing if wrapped
-  ),
-  #axis.text.x        = element_blank(),
-  axis.text.x = element_text(size = 5),
-  axis.text.y = element_text(size = 6),
-  panel.spacing      = unit(0.03, "lines"),
-  legend.position    = "right",
-  legend.key.size    = unit(0.3, "cm"),
-  legend.text        = ggtext::element_markdown(size = 5.5),
-  panel.grid.major.x = element_blank(),
-  panel.grid.minor.x = element_blank(),
-  panel.grid.major.y = element_blank(),
-  #panel.grid.major.y = element_line(color = "grey80"),
-  panel.grid.minor.y = element_blank(),
-  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
-)
-
-
-print(plot)
-
-ggsave(path = "Biofilm Project Figures",file="16Sstacked bar plot of Phylum detected-only sewer biofilm.png", plot=plot, width=6, height=6,dpi = 400)
-  ggsave(path = "Biofilm Project Figures",file="16S stacked bar plot of Phylum detected-only sewer biofilm.svg", plot=plot, width=6, height=6)
-  
-
-  
-  #-------------Create summary table of percent contribution by pathogen and sample type------------------
-phylum_summary <- plot_df %>%
-  group_by(class, Type) %>%
-  summarise(
-    MinPercent = min(rel_ab, na.rm = TRUE) * 100,
-    MaxPercent = max(rel_ab, na.rm = TRUE) * 100,
-    MeanPercent = mean(rel_ab, na.rm = TRUE) * 100,
-    MedianPercent = median(rel_ab, na.rm = TRUE) * 100,
-    .groups = "drop"
-  ) %>%
-  dplyr::rename(Phylum = class, SampleType = Type) %>%
   arrange(SampleType, desc(MeanPercent))
 
 
@@ -9681,9 +4508,9 @@ nmds_plotg <- nmdsMerged %>%
   ) + 
   
   #manualy change colors
-  scale_color_manual(values = c("d" = resistome_colors[[1]], "e" = resistome_colors[[2]], 
-                                "Municipal WW" = resistome_colors[[3]], 
-                                "Wastewater" = resistome_colors[[4]],"Tap Water" = "grey76"
+  scale_color_manual(values = c("d" = fortyfive_pal[[1]], "e" = fortyfive_pal[[2]], 
+                                "Municipal WW" = fortyfive_pal[[3]], 
+                                "Wastewater" = fortyfive_pal[[4]],"Tap Water" = "grey76"
                                 )) +
   #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
   #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
@@ -9737,7 +4564,7 @@ nmds_plotg <- nmdsMerged %>%
   
   #manualy change colors
   scale_color_manual(values = c("Sink Biofilm" = "#79307D", "Branch Biofilm" = "#417C8C", 
-                                "Municipal WW" = resistome_colors[[3]], 
+                                "Municipal WW" = fortyfive_pal[[3]], 
                                 "Wastewater" = "#E57262","Tap Water" = "grey76"
                                 )) +
   #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
@@ -9851,6 +4678,10 @@ pairwise_adonis_microbiome = pairwise.adonis2(subset_adonis, subset_metadata$Loc
 
 #run pairwise adonis using function
 pairwise_adonis_microbiome = pairwise.adonis2(subset_adonis, subset_metadata$Type, sim.method = 'bray', p.adjust.m = 'bonferroni'); pairwise_adonis_microbiome
+
+subset_adonis16S= subset_adonis
+
+subset_metadata16S= subset_metadata
 
 #adonis.pair(vegdist(subset_adonis),subset_metadata$subarea)
 
@@ -11084,7 +5915,7 @@ plot_df <- df %>%
   #make presence/absence
   mutate(rel_ab = ifelse(rel_ab>0,1,0)) %>%
   mutate(
-    Type  = recode(Type,
+    Type  = dplyr::recode(Type,
                    "H_WW"   = "Wastewater",
                    "Endcap" = "Sewer Biofilm",
                    "Drain"  = "Sink Biofilm")
@@ -11332,7 +6163,7 @@ plot_df <- df %>%
   #make presence/absence
   mutate(rel_ab = ifelse(rel_ab>0,1,0)) %>%
   mutate(
-    Type  = recode(Type,
+    Type  = dplyr::recode(Type,
                    "H_WW"   = "Wastewater",
                    "Endcap" = "Sewer Biofilm",
                    "Drain"  = "Sink Biofilm")
@@ -13418,7 +8249,7 @@ pathogen_summary
 
 
 
-#MaAsLin
+#MaAsLin Pathogens
 ##Maaslin3- Pathogens 
 ```{r}
 
@@ -13907,3 +8738,6174 @@ pathogens = b_rg %>%
 ```
  
  
+
+
+
+
+#  SET WORKING DIRECTORY #######################################
+
+```{r}
+#Setting working directory for importing data from excel
+setwd("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R")
+```
+
+
+# SET NAME OF PATH TO DATA
+```{r}
+data_path = "Input Data/"
+
+```
+ 
+
+#LOAD LIBRARIES
+```{r}
+rm(list = ls())
+library(ggplot2)
+library(ggtext)
+library(ggstatsplot)
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(OTUtable)
+library(vegan)
+library(ggupset)
+library(MASS)
+library(ggh4x)
+library(ggplot2)
+library(ggstatsplot)
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(OTUtable)
+library(vegan)
+library(MASS)
+library(sysfonts)
+library(showtext)
+library(tidytext)
+library(ggtext)
+```
+
+#INSTALL FUNCTION FROM GITHUB
+```{r eval=FALSE, include=FALSE}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("biobakery/maaslin3")
+
+Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS"=TRUE)
+
+
+install.packages("BiocManager")
+#BiocManager::install("maaslin3")
+BiocManager::install(c("phyloseq", "vegan", "Biostrings"))
+
+remotes::install_github("KarstensLab/microshades", dependencies = TRUE)
+
+#function pulled from github
+
+#install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+
+library(devtools)
+
+#devtools::install_github("gauravsk/ranacapa", force = TRUE)
+
+# library(ranacapa)
+# 
+# data(iris)
+# ranacapa::pairwise_adonis(iris[, 1:4], iris$Species)
+# 
+# ranacapa::pairwise_adonis(iris[, 1:4], iris$Species, reduce = 'setosa')
+# 
+# # similarity euclidean from vegdist and holm correction
+# pairwise_adonis(x = iris[, 1:4], factors = iris$Species,
+# sim_method = 'euclidian', p_adjust_m = 'holm')
+# 
+# #similarity manhattan from daisy and bonferroni correction
+# pairwise_adonis(x = iris[, 1:4], factors = iris$Species,
+# # sim_method = 'manhattan', p_adjust_m = 'bonferroni')
+# 
+# 
+# install.packages("spaa")
+# library(spaa)
+# 
+# devtools::install_github("GuillemSalazar/EcolUtils")
+# 
+# library(EcolUtils)
+# 
+# data(dune)
+# data(dune.env)
+# adonis.pair(vegdist(dune),dune.env$Management)
+```
+
+#COLORS
+```{r}
+
+colors = c("red",  "blue",  "green", "purple", "brown", "gold1", "orange", "hotpink", "black", "seagreen", "lightblue", "pink", "goldenrod4")
+
+colors = c("#9FB498", "#8488AC","#BA6646","#C8DFEA","#565656","#865856","#E8DCDD","#F8E5DC","#E8DCDC","#B99796","black","seagreen")
+
+
+
+resistome_colors = c("#8488AC", "#9FB498", "#BA6646", "#565656", "#865856", "#B99796", "#F8E5DC")
+
+posterCol1=  "#8488AC"
+posterCol2 = "#9FB498"
+posterCol3 = "#BA6646"
+posterCol4 = "#565656"
+posterCol5 = "#865856"
+posterCol6 = "#B99796"
+posterCol7 = "#F8E5DC"
+
+viridisCol1 = "#79307D"
+viridisCol2 = "#417C8C"
+viridsCol3 = "#E57262"
+
+colors = c( "#417C8C","#417C8C","#417C8C","#417C8C","#E57262","#79307D","#79307D","#79307D")
+
+#colors = c( "#79307D","#79307D","#417C8C","#417C8C","#417C8C","#417C8C","#E57262","#79307D","#79307D","#79307D")
+
+colors = c( "#8488AC","#BA6646","#9FB498")
+
+fortyfive_pal = c("#a0cb6b","#8368cb","#c86c69","#cdd3e5","#dab594","#d692d1",
+               "#7495c3","#9fdeca","#e2e8c3","#d8a4af","#71bed2","#bca9dd",
+               "#8bb598","#e5cbd4","#6d7ecd","#e4d5ca","#a8dfa5","#a0bada",
+               "#cbca6f","#c6926f","#cce7e6","#81a4b2","#ca69c3","#76bd75",
+               "#d37dae","#abb684","#6ecda4","#a88bbb","#8cbbb6","#d18191",
+               "#c1d8c2","#dac4e6","#e0adce","#a96dca","#e2bdb6","#aacedd",
+               "#9992d9","#e0d0ab","#a2abdf","#b88b9e","#b4a382","#dba294",
+               "#c9dd9b","#c8b67c","#b9847b")
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91")
+
+
+
+```
+
+
+
+#SET THEMES
+```{r}
+library(ggplot2)
+
+# Reset global theme and font
+theme_set(theme_grey(base_family = "", base_size = 11))
+
+# Remove theme_update() overrides
+theme_update(
+  axis.text.x        = element_text(),
+  axis.text.y        = element_text(),
+  axis.ticks.x       = element_line(),
+  axis.ticks.y       = element_line(),
+  axis.ticks.length.x = unit(0.15, "lines"),
+  panel.grid         = element_line(),
+  plot.background    = element_rect()
+)
+
+# Reset geom defaults that may have inherited "Chivo"
+update_geom_defaults("text",  list(family = ""))
+update_geom_defaults("label", list(family = ""))
+
+showtext::showtext_auto(FALSE)
+
+```
+
+#FUNCTIONS
+```{r}
+
+pairwise.adonis <- function(x,factors, sim.method = 'bray', p.adjust.m ='bonferroni')
+{
+  library(vegan)
+  co = combn(unique(factors),2)
+  pairs = c()
+  F.Model =c()
+  R2 = c()
+  p.value = c()
+  for(elem in 1:ncol(co)){
+    ad = adonis(x[factors %in% c(co[1,elem],co[2,elem]),] ~ factors[factors %in% c(co[1,elem],co[2,elem])] , method =sim.method);
+    pairs = c(pairs,paste(co[1,elem],'vs',co[2,elem]));
+    F.Model =c(F.Model,ad$aov.tab[1,4]);
+    R2 = c(R2,ad$aov.tab[1,5]);
+    p.value = c(p.value,ad$aov.tab[1,6])
+  }
+  p.adjusted = p.adjust(p.value,method=p.adjust.m)
+  pairw.res = data.frame(pairs,F.Model,R2,p.value,p.adjusted)
+  return(pairw.res)
+}
+
+
+#updated adonis2 function
+
+pairwise.adonis2 <- function(x, factors, sim.method = 'bray', p.adjust.m = 'bonferroni') {
+  library(vegan)
+  
+  co <- combn(unique(factors), 2) # all pair combinations
+  pairs <- c()
+  F.Model <- c()
+  R2 <- c()
+  p.value <- c()
+  
+  for (elem in 1:ncol(co)) {
+    # Subset the data & factor
+    sel <- factors %in% c(co[1, elem], co[2, elem])
+    
+    # Skip if any group has < 2 samples
+    if (min(table(factors[sel])) < 2) {
+      next
+    }
+    
+    ad <- adonis2(
+      x[sel, ] ~ factors[sel],
+      method = sim.method
+    )
+    
+    pairs     <- c(pairs, paste(co[1, elem], 'vs', co[2, elem]))
+    F.Model   <- c(F.Model, ad$F[1])
+    R2        <- c(R2, ad$R2[1])
+    p.value   <- c(p.value, ad$`Pr(>F)`[1])
+  }
+  
+  p.adjusted <- p.adjust(p.value, method = p.adjust.m)
+  pairw.res  <- data.frame(pairs, F.Model, R2, p.value, p.adjusted)
+  
+  return(pairw.res)
+}
+
+
+```
+
+#Load CSVs
+```{r}
+#load df
+card_df <- read.table(
+  "Input Data/combined_card_rpkm.tsv",
+  header = TRUE,
+  sep = "\t",
+  quote = "",
+  fill = TRUE
+) %>% 
+  
+  mutate(ARO.Accession = sub(".*(ARO:[^|]+)\\|.*", "\\1", gene_id))
+
+aro_index <- read.table(
+  "Input Data/aro_index.tsv",
+  header = TRUE,
+  sep = "\t",
+  quote = "",
+  fill = TRUE
+)
+
+
+
+card_df %>%
+  group_by(SampleID) %>%
+  summarise(total_RPKM = sum(RPKM))
+
+```
+
+
+#Load in Metadata
+```{r}
+
+metadata_df = read.csv("Input Data/metadata_Gi_AD.csv",header = T) %>% 
+  
+  #change name of Location
+  mutate(Location =  sub("^[0-9]+\\.", "", Location)) %>% 
+  
+  #change month column
+  mutate(Month = sub("^[0-9]+_", "", Month)) %>% 
+
+  #change date column
+  mutate(Date = sub("^[0-9]+_", "", Date)) %>% 
+  mutate(Date = mdy(paste0(Date, " 2024"))) %>% 
+  
+  dplyr::select(-LocationMonth,-LocationType) %>% 
+  
+  dplyr::rename("SampleID"="Sample_id")
+
+```
+
+
+#Merge data
+```{r}
+# Merge datasets based on the 'Sample_ID' column
+card_merged_df <- full_join(card_df, metadata_df, by = 'SampleID') %>% 
+  distinct() %>% 
+  ungroup() 
+    
+```
+
+
+#Get ARGs in panel
+```{r}
+#load df with ARGs in RPIP panel
+rpip_amr_df <- read_xlsx(
+  "Input Data/RPIP_Panel_Target_List (1).xlsx",
+  sheet = "Bacterial AMR",
+  skip = 0
+) 
+
+rpip_alleles = rpip_amr_df %>% dplyr::select(Allele) %>% distinct(Allele) %>% pull(Allele)
+
+rpip_gene_families = rpip_amr_df %>% distinct(`Gene Family`) %>% pull(`Gene Family`)
+
+```
+
+#Get proper ontologies
+```{r}
+
+
+# Merge datasets based on the 'Sample_ID' column
+card_merged_clean_df <- card_merged_df %>% 
+  distinct() %>% 
+  ungroup() %>%
+  mutate(Accession = str_extract(gene_id, "(?<=\\|)[^|]+(?=\\|ARO)"),
+         `ARO Accession` = str_extract(gene_id, "ARO:\\d+"),
+         Gene = str_extract(gene_id, "[^|]+$"))
+
+library(jsonlite)
+library(dplyr)
+library(purrr)
+library(tidyr)
+
+
+#library(dplyr)
+library(readr)
+
+# Load
+aro_df  <- read_tsv("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R/Input Data/card-data/aro_index.tsv")             # ARO terms
+aro_df2 <- read_tsv("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R/Input Data/card-data/aro_categories.tsv")        # categories
+aro_df3 <- read_tsv("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R/Input Data/card-data/aro_categories_index.tsv")  # links
+
+# Load the JSON file
+aro <- fromJSON("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R/Input Data/card-ontology/aro.json", flatten = TRUE) %>% 
+  dplyr::rename( `ARO Accession` = accession)
+
+aro_short_names = aro %>% 
+  dplyr::select(`ARO Accession`,`CARD Short Name`)
+
+
+#add short name
+# card_merged_clean_df = card_merged_clean_df %>% 
+#   full_join(aro_short_names,by = "accession")
+
+
+# Load
+card_to_megares_df  <- read_csv("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R/Input Data/megares_to_external_header_mappings_v3.00.csv")  %>% dplyr::select(-UpdatedHeader) %>% dplyr::rename("header" = "MEGARes_header")
+megares_annotations <- read_csv("/Users/amd689/Documents/Healy Lab/Biofilm Project/Biofilm YNHH Project R/Input Data/megares_annotations_v3.00.csv")        # categories
+
+megares_to_card_annotation = megares_annotations %>%
+  inner_join(card_to_megares_df, by =  "header") %>% filter(Database == "CARD") %>%
+  mutate(`ARO Accession` = sub(".*(ARO:[0-9]+).*", "\\1", Source_header))
+
+#final clean df to work with
+card_merged_w_ont_df = card_merged_clean_df %>% 
+  full_join(aro_df, by = "ARO Accession") %>% 
+  left_join(megares_to_card_annotation, by = "ARO Accession") %>% 
+  mutate(
+    card_edited_drug_class = case_when(
+      # Core antibiotic classes
+      str_detect(tolower(`Drug Class`), "penicillin|carbapenem|cephalosporin|betalactam") ~ "Betalactams",
+      str_detect(tolower(`Drug Class`), "sulfonamide") ~ "Sulfonamides",
+      str_detect(tolower(`Drug Class`), "diaminopyrimidine") ~ "Trimethoprim",
+      str_detect(tolower(`Drug Class`), "tetracycline") ~ "Tetracyclines",
+      str_detect(tolower(`Drug Class`), "aminocoumarin") ~ "Aminocoumarin",
+      str_detect(tolower(`Drug Class`), "aminoglycoside") ~ "Aminoglycoside",
+      str_detect(tolower(`Drug Class`), "elfamycin") ~ "Elfamycin",
+      str_detect(tolower(`Drug Class`), "phosphonic acid") ~ "Fosfomycin",
+      str_detect(tolower(`Drug Class`), "glycopeptide") ~ "Glycopeptides",
+      str_detect(tolower(`Drug Class`), "macrolide|lincosamide|streptogramin") ~ "MLS",
+      str_detect(tolower(`Drug Class`), "peptide") ~ "Peptides",
+      str_detect(tolower(`Drug Class`), "phenicol") ~ "Phenicol",
+      str_detect(tolower(`Drug Class`), "fluoroquinolone|quinolone") ~ "Quinolones",
+      str_detect(tolower(`Drug Class`), "rifamycin") ~ "Rifamycines",
+      
+      # Multi-drug / combination
+      str_detect(`Drug Class`, ";") ~ "Multi-Drug Resistant",   # any cell with semicolon
+      
+      # Less common or rare antibiotics
+      str_detect(tolower(`Drug Class`), "nucleoside") ~ "Nucleosides",
+      str_detect(tolower(`Drug Class`), "nitroimidazole") ~ "Nitroimidazoles",
+      str_detect(tolower(`Drug Class`), "mupirocin") ~ "Mupirocin-like",
+      str_detect(tolower(`Drug Class`), "pleuromutilin") ~ "Pleuromutilins",
+      str_detect(tolower(`Drug Class`), "bicyclomycin") ~ "Bicyclomycin-like",
+      str_detect(tolower(`Drug Class`), "nitrofuran") ~ "Nitrofurans",
+      str_detect(tolower(`Drug Class`), "fusidane") ~ "Fusidane-like",
+      str_detect(tolower(`Drug Class`), "diarylquinoline") ~ "Diarylquinolines",
+      str_detect(tolower(`Drug Class`), "isoniazid") ~ "Isoniazid-like",
+      str_detect(tolower(`Drug Class`), "cycloserine") ~ "Cycloserine-like",
+      str_detect(tolower(`Drug Class`), "pyrazine") ~ "Pyrazine-like",
+      str_detect(tolower(`Drug Class`), "thioamide") ~ "Thioamide-like",
+      str_detect(tolower(`Drug Class`), "salicylic acid") ~ "Salicylic Acid-like",
+      str_detect(tolower(`Drug Class`), "tetracenomycin") ~ "Tetracenomycin-like",
+      
+      # Disinfectants / antiseptics
+      str_detect(tolower(`Drug Class`), "disinfect|antiseptic") ~ "Disinfecting/Antiseptics",
+      str_detect(tolower(`Drug Class`), "antibacterial free fatty acid") ~ "Fatty Acid Antibiotics",
+      
+      TRUE ~ `Drug Class`  # keep original if it doesn't match
+    )
+  )
+
+
+drug_class_list = card_merged_w_ont_df %>%  dplyr::select(card_edited_drug_class ) %>% distinct() %>% pull()
+  
+categorized_drug_class = c("Betalactams", "Sulfonamides", "Trimethoprim", "Tetracyclines", "Aminocoumarin", "Aminoglycoside", "Elfamycin", "Fosfomycin", "Glycopeptides", "MLS", "Peptides", "Phenicol", "Quinolones", "Rifamycines")  
+    
+```
+#NMDS
+##NMDS on Resistome (CARD derived relative abundances)-ONLY SHARED DATES WITH BIOFILM
+```{r}
+#specify dates
+dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
+
+analysis_df <- card_merged_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  summarise(
+    biofilm_ref_date = Date,
+    .groups = "drop"
+  ) %>% distinct()
+
+filtered_df <- analysis_df %>%
+  mutate(Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+metadata = filtered_df %>%
+  
+  #filter dates
+  dplyr::select(SampleID,Location,Type,Month,Date) %>% distinct() %>% 
+  
+  
+  column_to_rownames(var = "SampleID")
+
+#filter for one outcome variable (using aro_accession because there are multiple aro_accessions per gene_name)
+data <- filtered_df %>% 
+  
+  #  #filter dates
+  # filter(
+  #   (Type == "H_WW" & Date %in% dates) |
+  #   (Type != "H_WW")
+  # ) %>% 
+  
+  dplyr::select(SampleID,gene_id, RPKM) %>% distinct() %>% 
+  
+  group_by(SampleID,gene_id) %>% 
+  mutate(RPKM = mean(RPKM,na.rm=T)) %>% 
+  ungroup() %>% 
+  
+  distinct() 
+
+
+# create dataframe with rows as samples names and columns as ARGs
+counts <- data %>% tidyr::pivot_wider(names_from = gene_id, values_from = RPKM) %>% 
+  
+  #replace NAs with zeros
+  mutate_all( ~replace(., lengths(.)==0, 0))
+
+#make row names sample_id
+counts <- counts %>% column_to_rownames(var = "SampleID")
+
+#make sure it's a numeric dataframe
+counts = as.data.frame(counts) %>% mutate(across(everything(), ~ as.numeric(as.character(.))))
+
+
+#replace NAs with 0
+counts[is.na(counts)] <- 0
+
+#remove samples 
+#counts <- counts[!(rownames(counts) %in% c("S209", "S210","S1","S2","S3")), ]
+
+
+dist2 <- vegdist(counts)
+argMDS <- isoMDS(dist2, trace = F)
+scores <- as.data.frame(argMDS)
+scores <- scores[,1:2]
+
+
+# Assuming 'scores' and 'metadata' are your dataframes
+common_rows <- intersect(rownames(counts), rownames(metadata))
+
+# Filter 'scores' dataframe to keep only rows present in 'metadata'
+filtered_counts <- counts[rownames(counts) %in% common_rows, ]
+
+# Filter 'scores' dataframe to keep only rows present in 'metadata'
+filtered_metadata <- metadata[rownames(metadata) %in% common_rows, ]
+
+# now plot the NMDS plot with envfit variables
+vare.mds <- metaMDS(filtered_counts, trace = FALSE, distance = "jaccard")
+
+ef <- envfit(vare.mds, filtered_metadata, permu = 999,na.rm = TRUE)
+
+#plote results
+plot(vare.mds, display = "sites")
+
+
+#extract envfit arrows data and filter out non significant one 
+#en_coord_cont = as.data.frame(scores(ef, "vectors")) * ordiArrowMul(ef) 
+#en_coord_cont$pval <- ef[["vectors"]][["pvals"]]
+#en_coord_cont <- filter(en_coord_cont,pval<=0.05)
+
+
+#extract nmds scores and associate to metadata 
+nmds_scores <- as.data.frame(scores(vare.mds)$sites)
+
+# Assuming your_data is your dataframe
+nmds_scores$SampleID <- rownames(nmds_scores)
+rownames(nmds_scores) <- NULL # now get rid of row names
+
+full_metadata = metadata %>% rownames_to_column(var = "SampleID") %>% 
+  
+  #create new variable combined with site and sample type
+  mutate("site_type"=paste0(Location,"_",Type))
+
+nmdsMerged = left_join(nmds_scores,full_metadata, by = "SampleID") 
+
+
+#specify Locations we want to incude in plot
+locations = c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
+
+nmds_plotg <- nmdsMerged %>% 
+  
+  filter(Location %in% locations) %>% 
+  
+  # now replace Site names 
+  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
+                              Location == "FIONA" ~ "Site 2",
+                              Location == "LUIGI" ~ "Site 3",
+                              Location == "SHREK" ~ "Site 4",
+                              Location == "OSCAR" ~ "Site 5",
+                              .default = Location)) %>% 
+  
+  #filter out municipal ww
+  filter(Type != "Mu_WW") %>% 
+  
+  #rename some variables
+  mutate(Type = case_when(Type == "Mu_WW"~ "Municipal WW",
+                          Type == "H_WW" ~ "Wastewater",
+                          .default = Type)) %>% 
+  
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Type, shape = Location, group = Type)) +
+  geom_point() +
+  stat_ellipse(linewidth = 0.75) +
+  
+  #annotate("text",x=NMDS.mean$MDS1,y=NMDS.mean$MDS2,label=NMDS.mean$group)+
+  
+  #fill colors
+  scale_color_manual(values = c(resistome_colors)) +
+  theme_bw() +
+  labs(
+    title = "NMDS for the Resistome",
+    x = "NMDS1",
+    y = "NMDS2",
+    color = "",
+    size = ""
+  ) + 
+  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
+  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
+  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
+
+  
+  theme(
+    axis.text.y = element_blank(),
+    legend.text = element_text(size = 13,color = "black"))
+
+# print plot
+nmds_plotg
+
+
+#ggsave 
+ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "CARD Based NMDS of Resistome-ONLY SHARED DATES WITH BIOFILM.png", dpi = 300, height = 6, width = 7, units = "in")
+    
+    
+
+
+#prettier NMDS plot with shapes and colors
+nmds_plotg <- nmdsMerged %>% 
+  
+  #filter out municipal ww
+  filter(Type != "Mu_WW") %>% 
+  
+  #rename some variables
+  mutate(Type = case_when(Type == "Mu_WW"~ "Municipal WW",
+                          Type == "Endcap" ~ "Branch Biofilm",
+                          Type == "Drain" ~ "Sink Biofilm",
+                          Type == "H_WW" ~ "Wastewater",
+                          .default = Type)) %>% 
+  
+  # now replace Site names 
+  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
+                              Location == "FIONA" ~ "Site 2",
+                              Location == "LUIGI" ~ "Site 3",
+                              Location == "SHREK" ~ "Site 4",
+                              Location == "OSCAR" ~ "Site 5",
+                              .default = Location)) %>% 
+  
+  #filter locations if needed
+  #filter(Location %in% locations) %>% 
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Type, shape = Location, group = Type)) +
+  geom_point() +
+  stat_ellipse(linewidth = 0.75) +
+  
+  #change colors
+  #scale_color_manual(values = c(
+    #"4" = "lightsalmon", "12" = "grey",
+   #                             )) +
+  #scale_shape_manual(values = c(1, 2
+                                #, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21,22, 29
+                                #)) +
+  theme_bw() +
+  labs(
+    title = "NMDS Plot",
+    x = "NMDS1",
+    y = "NMDS2",
+    color = "site_type",
+    size = "Collection Date"
+  ) + 
+  
+  #manualy change colors
+  scale_color_manual(values = c("Sink Biofilm" = "#79307D", "Branch Biofilm" = "#417C8C", 
+                                "Municipal WW" = resistome_colors[[3]], 
+                                "Wastewater" = "#E57262"
+                                )) +
+  #scale_shape_manual(values = c("Drain" = 1, "Endcap" = 2, "Municipal WW" = 3,  "Hospital WW" = 4 )) +
+  #geom_vline(xintercept = 0,linetype = "dashed")+ geom_hline(yintercept = 0,linetype = "dashed")+
+  #geom_segment(aes(x = 0, y = 0, xend =NMDS1, yend = NMDS2), data = en_coord_cont, size =1, alpha = 0.5, colour = "grey30") +
+  #geom_text(data = en_coord_cont, aes(x = NMDS1, y = NMDS2), colour = "grey30", fontface = "bold", label = row.names(en_coord_cont)) +
+  labs(title = "",
+       color = "",
+       shape = "") +
+  theme(axis.text.y = element_text(angle = 45, hjust = 1)) + 
+  theme(axis.text.y = element_blank(),
+        axis.title = element_text(size= 20,face = "bold",color = "black"),
+        legend.text = element_text(size = 15,face = "bold", color = "black"))
+
+# print plot
+nmds_plotg
+
+# Save the combined plot as a PNG file
+ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "CARD Resistome derived NMDS (species level) by Site and Location-ONLY SHARED DATES WITH BIOFILM.png", dpi = 300, height = 5, width = 7.5, units = "in")
+
+ggsave(plot = nmds_plotg, path = "Biofilm Project Figures", "CARD Resistome derived NMDS (species level) by Site and Location-ONLY SHARED DATES WITH BIOFILM.svg", height = 6, width = 7)
+
+
+
+```
+
+
+#PERMANOVA
+##Permanova on resistome (CARD)
+```{r}
+#specify Locations we want to incude in plot
+locations = c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
+
+# Find the right row indices
+rows <- which(filtered_metadata[, 1] %in% locations)
+
+# Subset the matrix based on the selected rows
+subset_metadata <- filtered_metadata[rows, ]
+
+# Get row names that are present in both data frames
+common_rows <- intersect(rownames(subset_metadata), rownames(filtered_counts))
+
+subset_adonis = filtered_counts[common_rows,]
+
+#run pairwise adonis using function
+pairwise_adonis_resistome = pairwise.adonis2(subset_adonis, subset_metadata$Location, sim.method = 'bray', p.adjust.m = 'bonferroni')
+
+adonis2(subset_adonis ~ Location + Type , subset_metadata, permutations = 9999, by = "margin")
+
+#adonis2 by Location
+#adonis2(subset_adonis ~ Location, subset_metadata, permutations = 9999)
+
+
+#run pairwise adonis using function
+pairwise_adonis_microbiome = pairwise.adonis2(subset_adonis, subset_metadata$Type, sim.method = 'bray', p.adjust.m = 'bonferroni')
+
+#adonis.pair(vegdist(subset_adonis),subset_metadata$subarea)
+
+```
+
+#Diversity
+##Diversity Metrics for Resistome (CARD)-ONLY SHARED DATES WITH BIOFILM
+```{r}
+#specify dates
+dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
+
+analysis_df <- card_merged_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+metadata = metadata_df %>% 
+  column_to_rownames(var = "SampleID")
+
+
+library(data.table)
+
+# Instead of dplyr mutate_all
+transposed <- filtered_df %>% 
+  
+  # #filter dates
+  # filter(
+  #   (Type == "H_WW" & Date %in% dates) |
+  #   (Type != "H_WW")
+  # ) %>% 
+  
+  dplyr::select(SampleID, gene_id, RPKM) %>% # average RPKM per sample-gene pair
+  distinct() %>% # pivot long → wide 
+  group_by(SampleID, gene_id) %>% # group in case of multiple entries
+  summarise(rpkm = mean(RPKM, na.rm = TRUE), .groups = "drop") %>% # values in cells = RPKM
+  pivot_wider(names_from = SampleID, values_from = rpkm, values_fill = 0) # replace missing with zero
+
+# Use data.table for conversion
+transposed_dt <- as.data.table(transposed) # turn into a data.table
+
+# Convert to matrix with genes as rows, samples as cols
+gene_matrix <- as.matrix(transposed_dt[, -"gene_id"])
+rownames(gene_matrix) <- transposed_dt$gene_id
+
+# Transpose so rows = samples, cols = genes
+counts <- t(gene_matrix)
+
+# Make sure it's integer
+storage.mode(counts) <- "integer"
+
+# Now metadata rownames should match
+all(rownames(counts) %in% rownames(metadata))
+
+# Assuming 'scores' and 'metadata' are your dataframes
+common_rows <- intersect(rownames(counts), rownames(metadata))
+
+# Filter 'scores' dataframe to keep only rows present in 'metadata'
+filtered_counts <- counts[rownames(counts) %in% common_rows, ]
+
+
+# Filter 'scores' dataframe to keep only rows present in 'metadata'
+filtered_metadata <- metadata[rownames(metadata) %in% common_rows, ]
+
+# Start clean from filtered_counts
+wide <- as.data.frame(filtered_counts)
+
+# # Force everything to numeric explicitly
+# wide[] <- lapply(wide, function(x) as.numeric(as.character(x)))
+# 
+# # Round and coerce to integer
+# wide[] <- lapply(wide, function(x) as.integer(round(x, 0)))
+
+# Convert to matrix
+wide <- as.matrix(wide)
+
+# Replace NAs with 0
+wide[is.na(wide)] <- 0
+
+# Drop any rows that are all zeros
+wide <- wide[rowSums(wide) > 0, ]
+
+# # Double-check: must return "integer"
+# str(wide)
+
+#S <- specnumber(wide)
+# raremax <- max(rowSums(wide))
+
+#Srare <- as.data.frame(vegan::rrarefy(wide, raremax))
+
+#shannon <- as.data.frame(vegan::diversity(as.matrix(Srare)))
+#shannon <- as.data.frame(vegan::diversity(Srare))
+# simpson <- as.data.frame(vegan::diversity(Srare, "simpson"))
+# richness <- as.data.frame(specnumber(Srare)) 
+# evenness <- as.data.frame(shannon/log(richness))
+
+#shannon  <- vegan::diversity(wide, index = "shannon")
+shannon = as.data.frame(vegan::diversity(wide,"shannon"))
+simpson  <- as.data.frame(vegan::diversity(wide, index = "simpson")) 
+richness <- as.data.frame(specnumber(wide))          # counts non-zero features
+evenness <- as.data.frame(shannon / log(richness))
+
+#spread <- as.data.frame(t(Srare))
+
+#chao1 <- as.data.frame(apply(spread, 2, chao1))
+
+diversity <- bind_cols(shannon, simpson, richness, evenness) %>% rownames_to_column() %>% distinct()
+
+names(diversity)[1:5] <- c("SampleID", "Shannon", "Simpson", "Richness", "Evenness")
+
+#specify Locations we want to incude in plot
+locations = c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
+
+diversity_cleaned = diversity %>%   
+  
+  
+  left_join(metadata_df, by = "SampleID") %>% 
+  
+  #filter subareas
+  filter(Location %in% locations) %>% 
+  
+  #select needed variables
+  dplyr::select(SampleID, Shannon,Location, Type) %>% 
+    
+    drop_na(Shannon) %>% 
+  
+  #clean
+  distinct() 
+
+#diversity$Process <- factor(diversity$Process, levels = c("PE", "AS", "SE", "FE"))
+
+# Calculate the median values for each group
+medians <- aggregate(Shannon ~ Location, diversity_cleaned, median)
+
+# Reorder the levels of the 'Group' factor based on the median values
+diversity_cleaned$Location <- factor(diversity_cleaned$Location, levels = medians$Location[order(medians$Shannon)])
+
+plot = ggbetweenstats(
+  data = diversity_cleaned,
+  x    = Location, 
+  y    = Shannon, 
+  outlier.tagging = T,
+  type = "nonparametric", 
+  p.adjust.method = "bonferroni",
+  conf.level = 0.95,
+  #pairwise.display = "none",
+  pairwise.display = "significant",
+  mean.plotting = TRUE,
+  mean.ci = FALSE,
+  centrality.plotting = FALSE,
+  #point.args = list(position = ggplot2::position_jitterdodge(dodge.width = 0.6), alpha = 0.4, size = 3, stroke = 0),
+  #median.point.args = list(size = 0.2, color = "pink"),
+  mean.label.args = list(size = 0.5)
+) + 
+  ylab("Shannon Diversity for Resistome")+
+  xlab("")+
+  labs(color = "")+
+  guides(color = "none")+
+  theme_classic()+
+  theme(axis.text.x= element_text(size = 9,color= "black"))
+  #theme(axis.text.x= element_text(angle = 45,size = 7,vjust = 0.9,hjust = 0.9,color= "black"))
+
+print(plot)
+
+# Save the combined plot as a PNG file
+ggsave(plot = plot, path = "Biofilm Project Figures", "CARD Based Resistome Diversity by Location-ONLY FOR SHARED DATES WITH BIOFILM.png", dpi = 300, height = 6, width = 7, units = "in")
+
+
+
+
+tidied_diversity = diversity_cleaned %>%
+  
+  # now replace Site names 
+  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
+                              Location == "FIONA" ~ "Site 2",
+                              Location == "LUIGI" ~ "Site 3",
+                              Location == "SHREK" ~ "Site 4",
+                              Location == "OSCAR" ~ "Site 5",
+                              .default = Location)) %>% 
+  
+  filter(Type != "Mu_WW") %>% 
+  
+  mutate(Type = case_when(Type =="H_WW"~ "Wastewater",Type == "Mu_WW" ~ "Municipal_WW",
+                        Type == "Endcap"~ "Sewer Biofilm",
+                        Type == "Drain" ~ "Sink Biofilm",
+                          .default = Type)) 
+
+#new ggstats plot wiht diversity by sample type
+# Calculate the median values for each group
+medians <- aggregate(Shannon ~ Type, tidied_diversity, median)
+
+# Reorder the levels of the 'Group' factor based on the median values
+tidied_diversity$Type <- factor(tidied_diversity$Type, levels = medians$Type[order(medians$Shannon)])
+
+plot = ggbetweenstats(
+  data = tidied_diversity,
+  x    = Type, 
+  y    = Shannon, 
+  outlier.tagging = T,
+  type = "nonparametric", 
+  p.adjust.method = "bonferroni",
+  conf.level = 0.95,
+  #pairwise.display = "none",
+  mean.plotting = TRUE,
+  mean.ci = FALSE,
+  #point.args = list(position = ggplot2::position_jitterdodge(dodge.width = 0.6), alpha = 0.4, size = 3, stroke = 0),
+  #median.point.args = list(size = 0.2, color = "pink"),
+  mean.label.args = list(size = 0.5)
+) + 
+  ylab("Shannon Diversity for Resistome")+
+  xlab("")+
+  labs(color = "")+
+  guides(color = "none")+
+  theme_classic()+
+  theme(axis.text.x= element_text(size = 9,face= "bold",color= "black"))
+  #theme(axis.text.x= element_text(angle = 45,size = 7,vjust = 0.9,hjust = 0.9,color= "black"))
+
+print(plot)
+
+ggsave(plot = plot, path = "Biofilm Project Figures", "CARD Based Resistome Diversity by Sample Type-ONLY FOR SHARED DATES WITH BIOFILM.png", dpi = 300, height = 6, width = 7, units = "in")
+
+```
+
+
+
+
+
+#Venn Diagrams
+## Venn diagram for sites shared-ONLY SHARED DATES WITH BIOFILM-updated
+```{r}
+
+#specify dates
+dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
+
+# ---- Prepare genus-level matrix ----
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+
+
+
+analysis_df <- card_merged_df %>%
+  filter(
+    Location %in% locations,
+    Type %in% c("Drain", "Endcap", "H_WW"),
+     (Type == "H_WW" & Date %in% dates) | (Type != "H_WW")
+  ) %>%
+  mutate(
+    rel_ab = as.numeric(rel_abundance),
+    Date   = as.Date(Date),
+    Type   = factor(Type, levels = c("Drain", "Endcap", "H_WW"))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+   mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+
+library(dplyr)
+library(ggvenn)
+
+# Colors
+earthy_green  <- "#9FB498"
+earthy_purple <- "#8488AC"
+earthy_orange <- "#E57262"
+
+viridisCol1 = "#79307D"
+viridisCol2 = "#417C8C"
+viridsCol3 = "#E57262"
+
+# Subareas to include
+locations <- c("FIONA","SHREK","OSCAR","MARIO","LUIGI")
+
+# Species-level rows only
+venn_df <- filtered_df 
+
+# Loop through each location
+for (loc in locations) {
+
+  df <- venn_df %>%
+    ungroup() %>%
+    distinct(Type, Location, Date, gene_id, rel_ab) %>%
+    filter(Location == loc) %>%
+    filter(rel_ab != 0) %>%
+    drop_na(Location)
+
+  # Build Venn input
+  ggvenn_df <- list(
+    Sink_Biofilm   = df %>% filter(Type == "Drain") %>% pull(gene_id),
+    Sewer_Biofilm = df %>% filter(Type == "Endcap") %>% pull(gene_id),
+    Hospital_WW  = df %>% filter(Type == "H_WW") %>% pull(gene_id)
+  )
+
+  # Plot with a title for clarity
+  print(
+    ggvenn(
+      ggvenn_df,
+      fill_color = c(viridisCol1, viridisCol2, viridsCol3),
+      stroke_size = 0.5,
+      set_name_size = 4
+    ) +
+    ggtitle(paste("Species overlap at", loc))
+  )
+}
+
+
+#now average overlap across Sites
+
+library(dplyr)
+library(purrr)
+library(ggvenn)
+
+# Function to compute overlaps at one location
+get_overlap_counts <- function(df) {
+  sets <- list(
+    Sink_Biofilm   = df %>% filter(Type == "Drain") %>% pull(gene_id),
+    Sewer_Biofilm = df %>% filter(Type == "Endcap") %>% pull(gene_id),
+    Hospital_WW  = df %>% filter(Type == "H_WW") %>% pull(gene_id)
+  )
+  
+  # All unique species
+  all_species <- unique(unlist(sets))
+  
+  # Build matrix: species × sets
+  mat <- sapply(sets, function(s) all_species %in% s)
+  
+  # Count combinations (like Venn regions)
+  counts <- apply(mat, 1, function(x) paste(which(x), collapse = "_"))
+  tibble(region = counts) %>%
+    dplyr::count(region, gene_id = "n")
+}
+
+# ---- STEP 1: Compute overlaps per location ----
+overlap_by_loc <- venn_df %>%
+  ungroup() %>%
+  distinct(Type, Location, Date, gene_id, rel_ab) %>%
+  filter(rel_ab != 0, Location %in% locations) %>%
+  split(.$Location) %>%
+  map(~ get_overlap_counts(.x))
+
+# ---- STEP 2: Average counts across locations ----
+avg_overlap <- bind_rows(
+  lapply(names(overlap_by_loc), function(loc) {
+    overlap_by_loc[[loc]] %>%
+      mutate(Location = loc)
+  })
+) %>%
+  group_by(region) %>%
+  summarise(avg_count = mean(n), .groups = "drop")
+
+print(avg_overlap)
+
+library(eulerr)
+
+fit <- euler(c(
+  "Sink_Biofilm"             = avg_overlap$avg_count[avg_overlap$region == "1"],
+  "Sewer_Biofilm"           = avg_overlap$avg_count[avg_overlap$region == "2"],
+  "Hospital_WW"            = avg_overlap$avg_count[avg_overlap$region == "3"],
+  "Sink_Biofilm&Sewer_Biofilm"= avg_overlap$avg_count[avg_overlap$region == "1_2"],
+  "Sink_Biofilm&Hospital_WW" = avg_overlap$avg_count[avg_overlap$region == "1_3"],
+  "Sewer_Biofilm&Hospital_WW"= avg_overlap$avg_count[avg_overlap$region == "2_3"],
+  "Sink_Biofilm&Sewer_Biofilm&Hospital_WW"= avg_overlap$avg_count[avg_overlap$region == "1_2_3"]
+))
+
+plot(fit, fills = c(viridisCol1, viridisCol2, viridsCol3), edges = TRUE)
+
+#counts
+plot(
+  fit,
+  fills = c(viridisCol1, viridisCol2, viridsCol3),
+  edges = TRUE,
+  labels = list(font = 2, cex = 0.8),   # bold, smaller text
+  quantities = list(type = "counts", font = 2, cex = 0.8) # numbers inside
+)
+
+
+
+#percentages
+plot(
+  fit,
+  fills = c(viridisCol1, viridisCol2, viridsCol3),
+  edges = TRUE,
+  labels = list(font = 2, cex = 0.8),   # bold, smaller text
+  quantities = list(type = "percent", font = 2, cex = 0.8) # numbers inside
+)
+
+
+
+library(gridGraphics)
+library(grid)
+
+# Draw the base eulerr plot onto the grid device
+grid.echo(function() {
+  plot(
+    fit,
+    fills = c(viridisCol1, viridisCol2, viridsCol3),
+    edges = TRUE,
+    labels = list(font = 2, cex = 0.8),
+    quantities = list(type = "counts", font = 2, cex = 0.8)
+  )
+})
+
+# Capture whatever is currently on the device
+g <- grid.grab()
+
+# Save with ggsave
+ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Average Overlap -Counts -ONLY SHARED DATES WITH BIOFILM-RPIP only.svg", plot = g, width = 6, height = 6)
+
+# Save with ggsave
+ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Average Overlap -Counts -ONLY SHARED DATES WITH BIOFILM-RPIP only.png", plot = g, width = 6, height = 6,dpi = 300)
+
+# # Draw the base eulerr plot onto the grid device
+# grid.echo(function() {
+#   plot(
+#     fit,
+#     fills = c(viridisCol1, viridisCol2, viridsCol3),
+#     edges = TRUE,
+#     labels = list(font = 2, cex = 0.8),
+#     quantities = list(type = "percent", font = 2, cex = 0.8)
+#   )
+# })
+# 
+# # Capture whatever is currently on the device
+# g <- grid.grab()
+# 
+# # Save with ggsave
+# ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Average Overlap -Percentages -ONLY SHARED DATES WITH BIOFILM-RPIP only.svg", plot = g, width = 6, height = 6)
+# # Save with ggsave
+# ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Average Overlap -Percentages -ONLY SHARED DATES WITH BIOFILM-RPIP only.png", plot = g, width = 6, height = 6,dpi = 300)
+
+
+#overlap for total pathogens across all Sites------------------------
+
+
+# Species-level rows only
+venn_df <- filtered_df 
+
+
+
+  df <- venn_df %>%
+    ungroup() %>%
+    distinct(Type, SampleID, gene_id, rel_ab) %>%
+    filter(rel_ab != 0) %>% 
+    mutate(presence = 1) %>% dplyr::select(-rel_ab) %>% distinct()
+  
+  df <- filtered_df %>%
+  distinct(Type, SampleID, gene_id, rel_ab) %>%
+  filter(rel_ab != 0) %>%
+  dplyr::select(Type, gene_id) %>%
+  distinct()
+  
+  sets_total <- list(
+  Sink_Biofilm   = df %>% filter(Type == "Drain") %>% pull(gene_id),
+  Sewer_Biofilm = df %>% filter(Type == "Endcap") %>% pull(gene_id),
+  Hospital_WW   = df %>% filter(Type == "H_WW") %>% pull(gene_id)
+)
+
+all_species <- unique(unlist(sets_total))
+
+presence_mat <- sapply(sets_total, function(s) all_species %in% s)
+
+region_df <- tibble(
+  region = apply(presence_mat, 1, function(x)
+    paste(which(x), collapse = "_"))
+) %>%
+  dplyr::count(region, gene_id = "n")
+
+  
+print(region_df)
+
+
+library(eulerr)
+
+fit_total <- euler(c(
+  "Sink_Biofilm"   = region_df$n[region_df$region == "1"],
+  "Sewer_Biofilm" = region_df$n[region_df$region == "2"],
+  "Hospital_WW"   = region_df$n[region_df$region == "3"],
+
+  "Sink_Biofilm&Sewer_Biofilm" =
+    region_df$n[region_df$region == "1_2"],
+
+  "Sink_Biofilm&Hospital_WW" =
+    region_df$n[region_df$region == "1_3"],
+
+  "Sewer_Biofilm&Hospital_WW" =
+    region_df$n[region_df$region == "2_3"],
+
+  "Sink_Biofilm&Sewer_Biofilm&Hospital_WW" =
+    region_df$n[region_df$region == "1_2_3"]
+))
+
+plot(
+  fit_total,
+  fills = c(viridisCol1, viridisCol2, viridsCol3),
+  edges = TRUE,
+  labels = list(font = 2, cex = 0.9),
+  quantities = list(type = "counts", font = 2, cex = 0.9)
+)
+
+# Capture whatever is currently on the device
+g <- grid.grab()
+
+# Save with ggsave
+ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Total -Counts -ONLY SHARED DATES WITH BIOFILM-RPIP only.svg", plot = g, width = 6, height = 6)
+
+# Save with ggsave
+ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Total -Counts -ONLY SHARED DATES WITH BIOFILM-RPIP only.png", plot = g, width = 6, height = 6,dpi = 300)
+
+#percentages
+plot(
+  fit_total,
+  fills = c(viridisCol1, viridisCol2, viridsCol3),
+  edges = TRUE,
+  labels = list(font = 2, cex = 0.9),
+  quantities = list(type = "percent", font = 2, cex = 0.9)
+)
+
+# Capture whatever is currently on the device
+g <- grid.grab()
+
+# Save with ggsave
+ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Total -Percents -ONLY SHARED DATES WITH BIOFILM-RPIP only.svg", plot = g, width = 6, height = 6)
+
+# Save with ggsave
+ggsave("Biofilm Project Figures/Kraken CT 0.15 Based Euler diagram Total -Percents -ONLY SHARED DATES WITH BIOFILM-RPIP only-percents.png", plot = g, width = 6, height = 6,dpi = 300)
+
+  
+  # Build Venn input
+  ggvenn_df <- list(
+    Sink_Biofilm   = df %>% filter(Type == "Drain") %>% pull(gene_id),
+    Sewer_Biofilm = df %>% filter(Type == "Endcap") %>% pull(gene_id),
+    Hospital_WW  = df %>% filter(Type == "H_WW") %>% pull(gene_id)
+  )
+
+  # Plot with a title for clarity
+  print(
+    ggvenn(
+      ggvenn_df,
+      fill_color = c(viridisCol1, viridisCol2, viridsCol3),
+      stroke_size = 0.5,
+      set_name_size = 4
+    ) +
+    ggtitle("Species overlap")
+  )
+
+```
+
+
+#UpSet Plots
+
+##upset plots without facets  (ggplot and UpSet version) (was this gene ever seen in this environment?)-ONLY SHARED DATES WITH BIOFILM
+```{r}
+
+#colors--------
+
+resistome_colors = c("#8488AC", "#9FB498", "#BA6646", "#565656", "#865856", "#B99796", "#F8E5DC")
+
+posterCol1=  "#8488AC"
+posterCol2 = "#9FB498"
+posterCol3 = "#BA6646"
+posterCol4 = "#565656"
+posterCol5 = "#865856"
+posterCol6 = "#B99796"
+posterCol7 = "#F8E5DC"
+
+viridisCol1 = "#79307D"
+viridisCol2 = "#417C8C"
+viridsCol3 = "#E57262"
+
+colors = c( "#417C8C","#417C8C","#417C8C","#417C8C","#E57262","#79307D","#79307D","#79307D")
+
+#colors = c( "#79307D","#79307D","#417C8C","#417C8C","#417C8C","#417C8C","#E57262","#79307D","#79307D","#79307D")
+
+colors = c( "#8488AC","#BA6646","#9FB498")
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91")
+
+
+# Specify locations to include------
+#specify dates
+dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
+
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+# Specify AMR genes------
+amr_genes <- c("blaTEM", "blaSHV", "blaCTX-M", "blaOXA", "blaKPC", "blaNDM", "blaVIM", "blaIMP",
+               "mecA", "vanA", "vanB", "ermB", "tetM", "tetO", "aac(3)-I", "aph(3')-IIIa",
+               "strA", "strB","sul1", "sul2", "dfrA", "dfrB", "qnrA", "qnrB", "qnrS")
+
+
+
+
+
+# ---------- Extract and clean ----------
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW"),
+    Location %in% locations
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    rel_ab = as.numeric(rel_abundance),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  summarise(
+    biofilm_ref_date = Date,
+    .groups = "drop"
+  ) %>% distinct()
+
+filtered_df <- analysis_df %>%
+  mutate(rel_ab = as.numeric(rel_abundance),
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+
+df <- filtered_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_ab,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  # #filter dates
+  # filter(
+  #   (Type == "H_WW" & Date %in% dates) |
+  #   (Type != "H_WW")
+  # ) %>% 
+  
+  mutate(
+    Month = format(as.Date(Date), "%m-%Y")
+  ) 
+
+
+
+# Plot with gene as category for upset------
+plot_df <- df %>%
+
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_ab) %>% 
+  
+  
+  #make presence/absence
+  mutate(rel_ab = ifelse(rel_ab>0,1,0)) %>%
+  mutate(
+    Type  = case_when(Type =="H_WW"   ~ "Wastewater",
+                      Type =="Endcap" ~ "Sewer Biofilm",
+                   Type =="Drain"  ~ "Sink Biofilm",
+                   .default = Type)
+  )
+  
+  
+
+
+wide_df <- plot_df %>%
+  group_by(Gene, Type) %>%
+  
+  #filter for at least one detect
+  summarise(detect = as.integer(sum(rel_ab) > 0), .groups = "drop") %>%
+  pivot_wider(
+    names_from = Type,
+    values_from = detect,
+    values_fill = 0
+  )
+
+
+
+library(ggupset)
+library(forcats)
+
+n_genes = 45
+
+
+wide_long <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>%
+  group_by(Gene) %>%
+  summarise(sets = list(unique(Type)), .groups = "drop") %>%
+  ungroup() 
+
+
+# Calculate top genes globally
+genes_freq <- wide_long %>%
+  dplyr::count(Gene, sort = TRUE)
+
+keep_genes <- genes_freq %>%
+  slice_head(n = n_genes) %>%
+  pull(Gene)
+
+# Relabel the rest as "Other"
+wide_long_cut <- wide_long %>%
+  mutate(
+    Genes_lumped = ifelse(Gene %in% keep_genes, Gene, "Other"),
+    Genes_lumped = factor(Genes_lumped)
+  )
+
+# Verify the levels
+length(levels(wide_long_cut$Genes_lumped))
+levels(wide_long_cut$Genes_lumped)
+
+genes_levels = levels(wide_long_cut$Genes_lumped)
+
+
+# #viridis palette
+# 
+# library(viridisLite)
+# 
+# genes_levels <- levels(wide_long$Genes_lumped)
+# 
+# palette <- c(
+#   viridis(length(genes_levels)-1, option = "D"),
+#   "grey70"
+# )
+# names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Assign colors: first N get a palette, "Other" gets grey
+palette <- c(fortyfive_pal, "grey70")
+names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Plot 
+
+plot = ggplot(wide_long_cut, aes(x = sets, fill = Genes_lumped)) +
+  geom_bar() +
+  scale_x_upset() +
+  labs(
+    fill = "Genes",
+    x = "",
+    y = "Number of Genes\nShared Between Groups"
+  ) +
+  scale_fill_manual(values = palette) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "right",
+    legend.key.size = unit(0.4, "cm"),
+    legend.text = element_markdown(size = 7.5),  # <- enable markdown
+    axis.title.y = element_text(margin = margin(r = 5)) # tighten y label
+  ) +
+  theme_combmatrix(
+    combmatrix.panel.point.color.fill = "black",
+    combmatrix.label.make_space = TRUE,   # <- stop reserving extra space
+    combmatrix.label.text = element_text(color = "black", size = 8.5),
+    #combmatrix.label.text = element_blank(),
+    combmatrix.panel.line.color = "black",
+    combmatrix.panel.striped_background = FALSE,
+    combmatrix.panel.point.size = 2
+  )
+
+print(plot)
+
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=7.5, height=4,dpi = 500)
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=7.5, height=4)
+
+
+
+
+#plot at class level ---------------
+
+  
+
+plot_df <- df %>%
+
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_ab,`Drug Class`) %>% 
+  
+  drop_na(Type) %>% 
+  
+  
+  #make presence/absence
+  mutate(rel_ab = ifelse(rel_ab>0,1,0)) %>%
+  mutate(
+    Type  = case_when(Type =="H_WW"   ~ "Wastewater",
+                      Type =="Endcap" ~ "Sewer Biofilm",
+                   Type =="Drain"  ~ "Sink Biofilm",
+                   .default = Type)
+  )
+  
+  
+
+
+wide_df <- plot_df %>%
+  group_by(Gene, `Drug Class` ,Type) %>%
+  
+  #filter for at least one detect
+  summarise(detect = as.integer(sum(rel_ab) > 0), .groups = "drop") %>%
+  pivot_wider(
+    names_from = Type,
+    values_from = detect,
+    values_fill = 0
+  )
+
+
+
+library(ggupset)
+library(forcats)
+
+n_classes = 45
+
+
+wide_long <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>%
+  group_by(Gene, `Drug Class`) %>%
+  summarise(sets = list(unique(Type)), .groups = "drop") %>%
+  ungroup() 
+
+
+# Calculate top genes globally
+classes_freq <- wide_long %>%
+  dplyr::count(`Drug Class`, sort = TRUE)
+
+keep_classes <- classes_freq %>%
+  slice_head(n = n_classes) %>%
+  pull(`Drug Class`)
+
+# Relabel the rest as "Other"
+wide_long_cut <- wide_long %>%
+  mutate(
+    classes_lumped = ifelse(`Drug Class` %in% keep_classes, `Drug Class`, "Other"),
+    classes_lumped = factor(classes_lumped)
+  )
+
+# Verify the levels
+length(levels(wide_long_cut$classes_lumped))
+
+
+class_levels = levels(wide_long_cut$classes_lumped)
+
+
+
+
+# #viridis palette
+# 
+# library(viridisLite)
+# 
+# genes_levels <- levels(wide_long$Genes_lumped)
+# 
+# palette <- c(
+#   viridis(length(genes_levels)-1, option = "D"),
+#   "grey70"
+# )
+# names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Assign colors: first N get a palette, "Other" gets grey
+palette <- c(fortyfive_pal, "grey70")
+names(palette) <- c(setdiff(class_levels, "Other"), "Other")
+
+
+# Plot 
+
+plot = ggplot(wide_long_cut, aes(x = sets, fill = classes_lumped)) +
+  geom_bar() +
+  scale_x_upset() +
+
+  labs(
+    fill = "CARD Drug Class",
+    x = "",
+    y = "Number of Genes\nShared Between Groups"
+  ) +
+  scale_fill_manual(values = palette) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "bottom",
+    legend.key.size = unit(0.35, "cm"),
+    legend.text = element_markdown(size = 7.5),  # <- enable markdown
+    axis.title.y = element_text(margin = margin(r = 5)) # tighten y label
+  ) +
+  theme_combmatrix(
+    combmatrix.panel.point.color.fill = "black",
+    combmatrix.label.make_space = TRUE,   # <- stop reserving extra space
+    combmatrix.label.text = element_text(color = "black", size = 9),
+    #combmatrix.label.text = element_blank(),
+    combmatrix.panel.line.color = "black",
+    combmatrix.panel.striped_background = FALSE,
+    combmatrix.panel.point.size = 2
+  )
+
+print(plot)
+
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by CARD Drug Class-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=7.5, height=8,dpi = 500)
+#ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by CARD Drug Class-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=7.5, height=4)
+
+
+
+#plot at arg mechanism level ---------------
+
+
+plot_df <- df %>%
+
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_ab,`Resistance Mechanism`) %>% 
+  
+  drop_na(Type) %>% 
+  
+    mutate(`Resistance Mechanism` = ifelse(grepl(";", `Resistance Mechanism`), "Multi", `Resistance Mechanism`)) %>%
+  
+  
+  #make presence/absence
+  mutate(rel_ab = ifelse(rel_ab>0,1,0)) %>%
+  mutate(
+    Type  = case_when(Type =="H_WW"   ~ "Wastewater",
+                      Type =="Endcap" ~ "Sewer Biofilm",
+                   Type =="Drain"  ~ "Sink Biofilm",
+                   .default = Type)
+  )
+  
+  
+
+
+wide_df <- plot_df %>%
+  group_by(Gene, `Resistance Mechanism` ,Type) %>%
+  
+  #filter for at least one detect
+  summarise(detect = as.integer(sum(rel_ab) > 0), .groups = "drop") %>%
+  pivot_wider(
+    names_from = Type,
+    values_from = detect,
+    values_fill = 0
+  )
+
+
+
+library(ggupset)
+library(forcats)
+
+n_classes = 45
+
+wide_long <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, `Resistance Mechanism`) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup()
+
+wide_long_clean <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, `Resistance Mechanism`) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup() %>% 
+  
+  dplyr::select(Gene, sets, `Resistance Mechanism`) %>%
+  distinct() 
+
+
+# Calculate top genes globally
+classes_freq <- wide_long_clean %>%
+  dplyr::count(`Resistance Mechanism`, sort = TRUE)
+
+keep_classes <- classes_freq %>%
+  slice_head(n = n_classes) %>%
+  pull(`Resistance Mechanism`)
+
+# Relabel the rest as "Other"
+wide_long_cut <- wide_long_clean %>%
+  mutate(
+    classes_lumped = ifelse(`Resistance Mechanism` %in% keep_classes,`Resistance Mechanism`, "Other"),
+    classes_lumped = factor(classes_lumped)
+  )
+
+# Verify the levels
+length(levels(wide_long_cut$classes_lumped))
+
+
+class_levels = levels(wide_long_cut$classes_lumped)
+
+
+
+
+# #viridis palette
+# 
+# library(viridisLite)
+# 
+# genes_levels <- levels(wide_long$Genes_lumped)
+# 
+# palette <- c(
+#   viridis(length(genes_levels)-1, option = "D"),
+#   "grey70"
+# )
+# names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Assign colors: first N get a palette, "Other" gets grey
+palette <- c(fortyfive_pal, "grey70")
+names(palette) <- c(setdiff(class_levels, "Other"), "Other")
+
+
+# Plot 
+
+plot = ggplot(wide_long_cut, aes(x = sets, fill = classes_lumped)) +
+  geom_bar() +
+  scale_x_upset() +
+
+  labs(
+    fill = "CARD Res Mechanism",
+    x = "",
+    y = "Number of Genes\nShared Between Groups"
+  ) +
+  scale_fill_manual(values = palette) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "right",
+    legend.key.size = unit(0.4, "cm"),
+    legend.text = element_markdown(size = 7.5),  # <- enable markdown
+    axis.title.y = element_text(margin = margin(r = 5)) # tighten y label
+  ) +
+  theme_combmatrix(
+    combmatrix.panel.point.color.fill = "black",
+    combmatrix.label.make_space = TRUE,   # <- stop reserving extra space
+    combmatrix.label.text = element_text(color = "black", size = 9),
+    #combmatrix.label.text = element_blank(),
+    combmatrix.panel.line.color = "black",
+    combmatrix.panel.striped_background = FALSE,
+    combmatrix.panel.point.size = 2
+  )
+
+print(plot)
+
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by CARD Res Mechanism-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=9, height=4,dpi = 500)
+#ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by CARD Res Mechanism-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=7.5, height=4)
+
+
+
+#plot at MEGARes Drug Class level ---------------
+
+
+
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, `Drug Class`, class) %>%
+  drop_na(Type) %>%
+  
+  mutate(
+    class = if_else(
+      is.na(class) | class == "",
+      # Take text before first colon OR semicolon
+      str_trim(str_extract(`Drug Class`, "^[^:;]+")),
+      class
+    )
+  ) %>%
+  
+  dplyr::select(-`Drug Class`) %>%
+  mutate(
+    rel_ab = ifelse(rel_ab > 0, 1, 0),
+    Type = case_when(
+      Type == "H_WW" ~ "Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain" ~ "Sink Biofilm",
+      .default = Type
+    )
+  )
+
+
+  
+
+
+wide_df <- plot_df %>%
+  group_by(Gene,  class ,Type) %>%
+  
+  #filter for at least one detect
+  summarise(detect = as.integer(sum(rel_ab) > 0), .groups = "drop") %>%
+
+  pivot_wider(
+    names_from = Type,
+    values_from = detect,
+    values_fill = 0
+  )
+
+
+
+library(ggupset)
+library(forcats)
+
+n_classes = 45
+
+wide_long <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, class) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup()
+
+wide_long_clean <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, class) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup() %>% 
+  
+  dplyr::select(Gene, sets, class) %>%
+  distinct() 
+
+
+# Calculate top genes globally
+classes_freq <- wide_long_clean %>%
+  dplyr::count(class, sort = TRUE)
+
+keep_classes <- classes_freq %>%
+  slice_head(n = n_classes) %>%
+  pull(class)
+
+# Relabel the rest as "Other"
+wide_long_cut <- wide_long_clean %>%
+  mutate(
+    classes_lumped = ifelse(class %in% keep_classes,class, "Other"),
+    classes_lumped = factor(classes_lumped)
+  )
+
+# Verify the levels
+length(levels(wide_long_cut$classes_lumped))
+
+
+class_levels = levels(wide_long_cut$classes_lumped)
+
+
+
+
+# #viridis palette
+# 
+# library(viridisLite)
+# 
+# genes_levels <- levels(wide_long$Genes_lumped)
+# 
+# palette <- c(
+#   viridis(length(genes_levels)-1, option = "D"),
+#   "grey70"
+# )
+# names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Assign colors: first N get a palette, "Other" gets grey
+palette <- c(fortyfive_pal, "grey70")
+names(palette) <- c(setdiff(class_levels, "Other"), "Other")
+
+
+# Plot 
+
+plot = ggplot(wide_long_cut, aes(x = sets, fill = classes_lumped)) +
+  geom_bar() +
+  scale_x_upset() +
+
+  labs(
+    fill = "MEGARes Drug Class",
+    x = "",
+    y = "Number of Genes\nShared Between Groups"
+  ) +
+  scale_fill_manual(values = palette) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "right",
+    legend.key.size = unit(0.35, "cm"),
+    legend.text = element_markdown(size = 7.5),  # <- enable markdown
+    axis.title.y = element_text(margin = margin(r = 5)) # tighten y label
+  ) +
+  theme_combmatrix(
+    combmatrix.panel.point.color.fill = "black",
+    combmatrix.label.make_space = TRUE,   # <- stop reserving extra space
+    combmatrix.label.text = element_text(color = "black", size = 8),
+    #combmatrix.label.text = element_blank(),
+    combmatrix.panel.line.color = "black",
+    combmatrix.panel.striped_background = FALSE,
+    combmatrix.panel.point.size = 2
+  )
+
+print(plot)
+
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by MEGARes Drug Class plus CARD-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=8.5, height=4,dpi = 500)
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by MEGARes Drug Class plus CARD-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=8.5, height=4)
+
+
+
+
+
+#plot at Drug Class level drop CARD annotations that don't have MEGARES matches ---------------
+
+
+
+
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, `Drug Class`, class) %>%
+  drop_na(Type) %>%
+  
+  drop_na(class) %>% 
+  
+  dplyr::select(-`Drug Class`) %>%
+  
+  mutate(
+    rel_ab = ifelse(rel_ab > 0, 1, 0),
+    Type = case_when(
+      Type == "H_WW" ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain" ~ "Sink Biofilm",
+      .default = Type
+    )
+  )
+
+
+  
+
+
+wide_df <- plot_df %>%
+  group_by(Gene,  class ,Type) %>%
+  
+  #filter for at least one detect
+  summarise(detect = as.integer(sum(rel_ab) > 0), .groups = "drop") %>%
+  pivot_wider(
+    names_from = Type,
+    values_from = detect,
+    values_fill = 0
+  )
+
+
+
+library(ggupset)
+library(forcats)
+
+n_classes = 45
+
+wide_long <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Hospital Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, class) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup()
+
+wide_long_clean <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Hospital Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, class) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup() %>% 
+  
+  dplyr::select(Gene, sets, class) %>%
+  distinct() 
+
+
+# Calculate top genes globally
+classes_freq <- wide_long_clean %>%
+  dplyr::count(class, sort = TRUE)
+
+keep_classes <- classes_freq %>%
+  slice_head(n = n_classes) %>%
+  pull(class)
+
+# Relabel the rest as "Other"
+wide_long_cut <- wide_long_clean %>%
+  mutate(
+    classes_lumped = ifelse(class %in% keep_classes,class, "Other"),
+    classes_lumped = factor(classes_lumped)
+  )
+
+# Verify the levels
+length(levels(wide_long_cut$classes_lumped))
+
+
+class_levels = levels(wide_long_cut$classes_lumped)
+
+
+
+
+# #viridis palette
+# 
+# library(viridisLite)
+# 
+# genes_levels <- levels(wide_long$Genes_lumped)
+# 
+# palette <- c(
+#   viridis(length(genes_levels)-1, option = "D"),
+#   "grey70"
+# )
+# names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Assign colors: first N get a palette, "Other" gets grey
+palette <- c(fortyfive_pal, "grey70")
+names(palette) <- c(setdiff(class_levels, "Other"), "Other")
+
+
+# Plot 
+
+plot = ggplot(wide_long_cut, aes(x = sets, fill = classes_lumped)) +
+  geom_bar() +
+  scale_x_upset() +
+
+  labs(
+    fill = "MEGARes Drug Class",
+    x = "",
+    y = "Number of ARGs\nShared Between Groups"
+  ) +
+  scale_fill_manual(values = palette) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "right",
+    legend.key.size = unit(0.35, "cm"),
+    legend.text = element_markdown(size = 7.5),  # <- enable markdown
+    axis.title.y = element_text(margin = margin(r = 5)) # tighten y label
+  ) +
+  theme_combmatrix(
+    combmatrix.panel.point.color.fill = "black",
+    combmatrix.label.make_space = TRUE,   # <- stop reserving extra space
+    combmatrix.label.text = element_text(color = "black", size = 8),
+    #combmatrix.label.text = element_blank(),
+    combmatrix.panel.line.color = "black",
+    combmatrix.panel.striped_background = FALSE,
+    combmatrix.panel.point.size = 2
+  )
+
+print(plot)
+
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by MEGARes Drug Class-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=7.5, height=4,dpi = 500)
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by MEGARes Drug Class-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=7.5, height=4)
+
+
+
+
+#plot at Drug Class level drop CARD annotations that don't have MEGARES matches ---------------
+
+
+
+
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, card_edited_drug_class) %>%
+  drop_na(Type) %>%
+  
+  
+  mutate(
+    rel_ab = ifelse(rel_ab > 0, 1, 0),
+    Type = case_when(
+      Type == "H_WW" ~ "Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain" ~ "Sink Biofilm",
+      .default = Type
+    )
+  )
+
+
+  
+
+
+wide_df <- plot_df %>%
+  group_by(Gene,card_edited_drug_class ,Type) %>%
+  
+  #filter for at least one detect
+  summarise(detect = as.integer(sum(rel_ab) > 0), .groups = "drop") %>%
+  pivot_wider(
+    names_from = Type,
+    values_from = detect,
+    values_fill = 0
+  )
+
+
+
+library(ggupset)
+library(forcats)
+
+n_classes = 45
+
+
+
+wide_long_clean <- wide_df %>%
+  pivot_longer(cols = c("Sink Biofilm","Sewer Biofilm","Wastewater"),
+               names_to = "Type",
+               values_to = "detect") %>%
+  filter(detect == 1) %>% 
+  group_by(Gene, card_edited_drug_class) %>%
+  mutate(sets = list(unique(Type))) %>% 
+  ungroup() %>% 
+  
+  dplyr::select(Gene, sets, card_edited_drug_class) %>%
+  distinct() 
+
+
+# Calculate top genes globally
+classes_freq <- wide_long_clean %>%
+  dplyr::count(card_edited_drug_class, sort = TRUE)
+
+keep_classes <- classes_freq %>%
+  slice_head(n = n_classes) %>%
+  pull(card_edited_drug_class)
+
+categorized_drug_class = c("Betalactams", "Sulfonamides", "Trimethoprim", "Tetracyclines", "Aminocoumarin", "Aminoglycoside", "Elfamycin", "Fosfomycin", "Glycopeptides", "MLS", "Peptides", "Phenicol", "Quinolones", "Rifamycines")  
+
+keep_classes  = categorized_drug_class
+
+# Relabel the rest as "Other"
+wide_long_cut <- wide_long_clean %>%
+  mutate(
+    classes_lumped = ifelse(card_edited_drug_class %in% keep_classes,card_edited_drug_class, "Other"),
+    classes_lumped = factor(classes_lumped)
+  )
+
+# Verify the levels
+length(levels(wide_long_cut$classes_lumped))
+
+
+class_levels = levels(wide_long_cut$classes_lumped)
+
+
+
+
+# #viridis palette
+# 
+# library(viridisLite)
+# 
+# genes_levels <- levels(wide_long$Genes_lumped)
+# 
+# palette <- c(
+#   viridis(length(genes_levels)-1, option = "D"),
+#   "grey70"
+# )
+# names(palette) <- c(setdiff(genes_levels, "Other"), "Other")
+
+
+# Assign colors: first N get a palette, "Other" gets grey
+palette <- c(fortyfive_pal, "grey70")
+names(palette) <- c(setdiff(class_levels, "Other"), "Other")
+
+
+# Plot 
+
+plot = ggplot(wide_long_cut, aes(x = sets, fill = classes_lumped)) +
+  geom_bar() +
+  scale_x_upset() +
+
+  labs(
+    fill = "Drug Class",
+    x = "",
+    y = "Number of ARGs\nShared Between Groups"
+  ) +
+  scale_fill_manual(values = palette) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "right",
+    legend.key.size = unit(0.35, "cm"),
+    legend.text = element_markdown(size = 7.5),  # <- enable markdown
+    axis.title.y = element_text(margin = margin(r = 5)) # tighten y label
+  ) +
+  theme_combmatrix(
+    combmatrix.panel.point.color.fill = "black",
+    combmatrix.label.make_space = TRUE,   # <- stop reserving extra space
+    combmatrix.label.text = element_text(color = "black", size = 8),
+    #combmatrix.label.text = element_blank(),
+    combmatrix.panel.line.color = "black",
+    combmatrix.panel.striped_background = FALSE,
+    combmatrix.panel.point.size = 2
+  )
+
+print(plot)
+
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by Pruden Lab Drug Class-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=4.5, height=4,dpi = 500)
+ggsave(path = "Biofilm Project Figures",file="Unfaceted CARD UpSet plot of ARGS detected by Pruden Lab Drug Class-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=4.5, height=4)
+
+#---------------Get counts of ARGs in each category for Pruden lab categories---------
+# Create a summary table of the intersections
+intersection_counts <- wide_long_clean %>%
+  mutate(set_string = sapply(sets, function(x) paste(sort(x), collapse = " & "))) %>%
+  group_by(set_string) %>%
+  summarise(n_genes = n(), .groups = "drop") %>%
+  arrange(desc(n_genes))
+
+# View the results
+print(intersection_counts)
+
+```
+
+#UpSet Plot- Genes Shared by Relative Abundance or Presence Absence
+##upset plot set themes
+```{r}
+font_add_google("Reem Kufi", "Reem Kufi")   # <-- REQUIRED
+showtext_auto()                             # <-- activates showtext
+
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Reem Kufi", base_size = 12))
+
+theme_update(
+  plot.title = element_text(size = 27,
+                            face = "bold",
+                            hjust = .5,
+                            margin = margin(10, 0, 30, 0)),
+  plot.caption = element_text(size = 9,
+                              color = "grey40",
+                              hjust = .5,
+                              margin = margin(20, 0, 5, 0)),
+  axis.text.y = element_blank(),
+  axis.title = element_blank(),
+  plot.background = element_rect(fill = "grey88", color = NA),
+  panel.background = element_rect(fill = NA, color = NA),
+  panel.grid = element_blank(),
+  panel.spacing.y = unit(0, "lines"),
+  strip.text.y = element_blank(),
+  legend.position = "bottom",
+  legend.text = element_text(size = 9, color = "grey40"),
+  legend.box.margin = margin(t = 30), 
+  legend.background = element_rect(color = "grey40", 
+                                   size = .3, 
+                                   fill = "grey95"),
+  legend.key.height = unit(.25, "lines"),
+  legend.key.width = unit(2.5, "lines"),
+  plot.margin = margin(rep(20, 4))
+)
+
+#second-------------------
+
+font_add_google("Chivo", "Chivo")
+font_add_google("Passion One", "Passion One")
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Chivo"))
+
+theme_update(axis.text.x = element_text(size = 11, color = "grey20"),
+             axis.text.y = element_text(size = 13, color = "black", face = "bold"),
+             axis.ticks.x = element_line(color = "grey45"),
+             axis.ticks.y = element_blank(),
+             axis.ticks.length.x = unit(.4, "lines"),
+             panel.grid = element_blank(),
+             plot.background = element_rect(fill = "grey60", color = "grey60"))
+```
+
+##Upset Plot - ARGs (genes of concern) by Presence Absence- All Sites in One-ONLY SHARED DATES WITH BIOFILM-filtered for what's enriched (listed approach)
+```{r eval=FALSE, include=FALSE}
+#theme set----------
+#font_add_google("Chivo", "Chivo")
+#font_add_google("Passion One", "Passion One")
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Chivo"))
+
+theme_update(axis.text.x = element_text(size = 11, color = "grey20"),
+             axis.text.y = element_text(size = 13, color = "black"),
+             axis.ticks.x = element_line(color = "grey45"),
+             axis.ticks.y = element_blank(),
+             axis.ticks.length.x = unit(.4, "lines"),
+             panel.grid = element_blank(),
+             plot.background = element_rect(fill = "grey60", color = "grey60"))
+
+#font_add_google("Reem Kufi", "Reem Kufi")   # <-- REQUIRED
+showtext_auto()                             # <-- activates showtext
+
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Reem Kufi", base_size = 12))
+
+theme_update(
+  plot.title = element_text(size = 27,
+                            face = "bold",
+                            hjust = .5,
+                            margin = margin(10, 0, 30, 0)),
+  plot.caption = element_text(size = 9,
+                              color = "grey40",
+                              hjust = .5,
+                              margin = margin(20, 0, 5, 0)),
+  axis.text.y = element_blank(),
+  axis.title = element_blank(),
+  plot.background = element_rect(fill = "grey88", color = NA),
+  panel.background = element_rect(fill = NA, color = NA),
+  panel.grid = element_blank(),
+  panel.spacing.y = unit(0, "lines"),
+  strip.text.y = element_blank(),
+  legend.position = "bottom",
+  legend.text = element_text(size = 9, color = "grey40"),
+  legend.box.margin = margin(t = 30), 
+  legend.background = element_rect(color = "grey40", 
+                                   size = .3, 
+                                   fill = "grey95"),
+  legend.key.height = unit(.25, "lines"),
+  legend.key.width = unit(2.5, "lines"),
+  plot.margin = margin(rep(20, 4))
+)
+
+#R prep---------------------------------------
+## packages
+library(tidyverse)
+library(dplyr)
+library(patchwork)
+library(ggtext)
+library(showtext)
+library(sysfonts)
+library(ggplot2)
+library(ggstatsplot)
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(OTUtable)
+library(vegan)
+library(MASS)
+library(ggtext)
+library(ggupset)
+library(forcats)
+
+#font_add_google("Chivo", "Chivo")
+#font_add_google("Passion One", "Passion One")
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Chivo"))
+
+theme_update(axis.text.x = element_text(size = 11, color = "grey10"),
+             axis.text.y = element_text(size = 13, color = "black"),
+             axis.ticks.x = element_line(color = "white"),
+             axis.ticks.y = element_blank(),
+             axis.ticks.length.x = unit(.4, "lines"),
+             title = element_text(size = 55),
+             panel.grid = element_blank(),
+             plot.background = element_rect(fill = "white", color = "white"))
+
+#R data -------------------------
+dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
+
+# Specify locations to include
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+#genes
+
+#blactx-m, mecA, tetA, tetW,ermB, vanA, qnrS, blatem
+
+#filter for contains CTX-M-1 in ARO Name
+#filter for tet(A) as ARO Name
+# filter for contains TEM- in ARO Name
+# filter for mecA in ARO Name (colistin gene)
+# filter for tet(W) as ARO Name
+# filter for ErmB as ARO Name
+#filter for Gen = vanA or ARO is exactly vanA
+#filter for Gen = sul1 or ARO is exactly sul1
+#filter for has qnrS in ARO Name
+#filter for Gen = vanB or ARO is exactly vanB
+#filter for Gen = sul2 or ARO is exactly sul2
+#filter for Gen = sul3 or ARO is exactly sul3
+#filter for contains NDM in ARO Name
+#filter for contains KPC in ARO Name
+#filter for contains SHV in ARO Name
+#filter for contains MCR in ARO Name
+#filter for contains cfrA in ARO Name
+#filter for contains QnrA in ARO Name
+#filter for contains tet(M) in ARO Name
+#filter for qac genes
+
+# from  Diamantina Lymperatou 2025 paper
+#primary hosts of ARGs within HWS were found to be Escherichia coli and Klebsiella pneumoniae
+
+#most common ARGs in wastewater:
+#betalactams: blaCTX-M,bla-SHV, bla-TEM, bla-OXA-ESBLs
+#Carbapenems: bla-KPC, bla-NDM, bla-VIM, bla-OXA-48, bla-IMP 
+#Colistin: mcr-1 to mcr-10, pmrA, pmrB
+#Tetracyclines: tetA, tetB, tetM, tetO, tetX, tetC, tetD, tetG
+#Sulfonamides: sul1, sul2, sul3
+#vancomycin: vanA, vanB, vanC, vanD, vanE, vanG, vanL, vanM, vanN
+
+#most of concer:
+#mcr-5.1
+
+#MRSA related: mecA, FemB, and SCCmec elements
+
+#from Xinyi Shuai 2024 paper
+#highest priority: 
+#Betalactams: blaOXA-181, blaOXA-212, bla-OXA-309, blaOXA-1, blaMOX-7, blaGES-1, bla OXA 13, blaVIM-2, blaIMP-1, blaBEL-2, blaOXA-236, blaFOX-7, blaPER-3, blaOXA-5, blaNPS-1, bla FOX-4, bla KPC-2, bla OXA-36, bla TEM-1, blaOXA-101, blaOXA-333, blaFOX-6, bla MOX-6, blaOXA-119, blaTEM-83, blaGES-5, blaOXA-17, blaOXA-58, blaOXA-24, blaNDM-1, blaOXA-4, blaCTX-M-61, bla OXA-211, bla OXA-10, bla CTX-M, bla VEB-3, blaIMP-25, blaOXA-2,blaCMY-111
+#MLS: ermB, ermF, msrC, ereB, ereA, mefA
+#multidrug: emrE, adeK, emrB, mexB, adeJ, EmrB-QacA, mdtE, TolC, mdtK, adeC, mexT, mexI
+# Polymyxin: mcr-3, mcr-5
+#quinolone: qnrS, qnrB
+
+#high priority
+#vancomycin: vanH, vanS, vanB, vanX
+#aminoglycoside: APH(6)-Id, ant(3'')-lh-aac(6'-lld), ant(2'')-I, aadB, aph(3'')-I, aph(6)-I, aac(6')-30-aac(6')-lb', aac(3)-II, aadA
+#fosfomycin: fosA
+#fosmidomycin: rosB
+#Glycylcyclines: tetX2
+
+#highly important:
+#Chloramphenicol: cmlA
+#sulfonamide: sul1, sul2
+#tetracyclines: tetA, tetQ, tetE, tetO, tetM, tetW, tet39
+#trimethoprim: dfrA17, dfrA23,dfrA12
+#bacitracin: bacA
+
+
+
+
+#filter for contains OXA in ARO Name
+library(stringr)
+library(stringr)
+library(dplyr)
+
+
+
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    rel_ab = as.numeric(rel_abundance),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+  ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(rel_ab = as.numeric(rel_abundance),
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+
+# 1. Clean your target list (ensure it's a simple character vector)
+target_genes <- tolower(as.character(rpip_alleles))
+
+library(dplyr)
+library(stringr)
+library(purrr)
+library(tidyr)
+library(tibble)
+
+
+
+df <- filtered_df %>%
+
+  mutate(
+    TypeLabel = case_when(
+      Type == "H_WW"   ~ "Wastewater",
+      Type == "Drain"  ~ "Sink Biofilm",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      TRUE ~ as.character(Type)
+    ),
+    Month = format(Date, "%m-%Y")
+  ) %>%
+  distinct(Gene, SampleID, Date, Location, Type, card_edited_drug_class, rel_ab, TypeLabel, Month, `Model Name`,`ARO Name`) %>% 
+
+  # 2. Filter using the 'Model Name' column 
+  # (This matches the nomenclature in your list best)
+  #filter(tolower(`Model Name`) %in% target_genes) %>% 
+
+
+
+#filter args in candidate list
+filter(
+  # contains CTX-M-1
+  str_detect(`ARO Name`, regex("CTX-M-", ignore_case = TRUE)) |
+  # exactly tet(A)
+  str_detect(`ARO Name`, regex("tet\\(A\\)", ignore_case = TRUE)) |
+  # exactly tet(M)
+  str_detect(`ARO Name`, regex("tet\\(M\\)", ignore_case = TRUE)) |
+  # contains TEM- (for example TEM-1, TEM-2, etc)
+  str_detect(`ARO Name`, regex("TEM-", ignore_case = TRUE)) |
+  # contains NDM-
+  str_detect(`ARO Name`, regex("NDM-", ignore_case = TRUE)) |
+  # contains KPC-
+  str_detect(`ARO Name`, regex("KPC-", ignore_case = TRUE)) |
+  # contains SHV-
+  str_detect(`ARO Name`, regex("SHV-", ignore_case = TRUE)) |
+  # contains OXA-
+  str_detect(`ARO Name`, regex("OXA-", ignore_case = TRUE)) |
+  # contains MCR-
+  str_detect(`ARO Name`, regex("MCR-", ignore_case = TRUE)) |
+  # exactly mecA
+  str_to_lower(`ARO Name`) == "meca" |
+  # exactly tet(W)
+  str_detect(`ARO Name`, regex("tet\\(W\\)", ignore_case = TRUE)) |
+  # exactly tet(M)
+  str_detect(`ARO Name`, regex("tet\\(M\\)", ignore_case = TRUE)) |
+  # exactly ErmB (or case-insensitive)
+  str_to_lower(`ARO Name`) == "ermb" |
+  # exactly QnrA (or case-insensitive)
+  str_to_lower(`ARO Name`) == "qnra" |
+  # Gene == vanA OR ARO Name exactly vanA
+  Gene == "vanA" |
+  str_to_lower(`ARO Name`) == "vana" |  # if your ARO Name column is just "vanA"
+  # Gene == cfrA OR ARO Name exactly cfrA
+  Gene == "cfrA" |
+  str_to_lower(`ARO Name`) == "cfra" |  # if your ARO Name column is just "vanA"
+    # Gene == vanB OR ARO Name exactly vanB
+  Gene == "vanA" |
+  str_to_lower(`ARO Name`) == "vanb" |  # if your ARO Name column is just "vanB"
+  # Gene == sul1 OR ARO Name exactly sul1
+  Gene == "sul1" |
+  str_to_lower(`ARO Name`) == "sul1" |
+  # Gene == sul2 OR ARO Name exactly sul2
+  Gene == "sul2" |
+  str_to_lower(`ARO Name`) == "sul2" |
+  # Gene == sul3 OR ARO Name exactly sul3
+  Gene == "sul3" |
+  str_to_lower(`ARO Name`) == "sul3" |
+  # contains qnrS anywhere
+  str_detect(`ARO Name`, regex("qnrS", ignore_case = TRUE)) |
+
+    Gene == "MCR-5.1" |
+  #filter for qac genes
+  str_detect(`ARO Name`, regex("qac", ignore_case = TRUE))
+) %>%
+
+  mutate(Gene = case_when(str_detect(Gene, regex("CTX-M-1\\b", ignore_case = TRUE)) ~ "bla-CTX-M-1",
+                        str_detect(Gene, regex("CTX-M-", ignore_case = TRUE)) ~ "bla-CTX-M",
+                        str_detect(Gene, regex("tet\\(A\\)", ignore_case = TRUE))~ "tetA",
+                        str_detect(Gene, regex("tet\\(M\\)", ignore_case = TRUE))~ "tetM",
+                        str_detect(Gene, regex("TEM-", ignore_case = TRUE)) ~ "blaTEM",
+                        str_detect(Gene, regex("NDM-", ignore_case = TRUE)) ~ "blaNDM",
+                        str_detect(Gene, regex("KPC-", ignore_case = TRUE)) ~ "blaKPC",
+                        str_detect(Gene, regex("SHV-", ignore_case = TRUE)) ~ "blaSHV",
+                        str_detect(Gene, regex("OXA-", ignore_case = TRUE)) ~ "blaOXA",
+                        str_detect(Gene, regex("MCR-5.1", ignore_case = TRUE)) ~ "mcr-5.1",
+                        str_detect(Gene, regex("MCR-4.3", ignore_case = TRUE)) ~ "mcr-4.3",
+                        str_detect(Gene, regex("MCR-1", ignore_case = TRUE)) ~ "mcr-1",
+                        str_detect(Gene, regex("MCR-2", ignore_case = TRUE)) ~ "mcr-2",
+                        str_detect(Gene, regex("MCR-3", ignore_case = TRUE)) ~ "mcr-3",
+                        str_detect(Gene, regex("MCR-6", ignore_case = TRUE)) ~ "mcr-6",
+                        str_detect(Gene, regex("MCR-7", ignore_case = TRUE)) ~ "mcr-7",
+                        str_detect(Gene, regex("MCR-8", ignore_case = TRUE)) ~ "mcr-8",
+                        str_detect(Gene, regex("MCR-9", ignore_case = TRUE)) ~ "mcr-9",
+                        str_detect(Gene, regex("MCR-", ignore_case = TRUE)) ~ "mcr",
+                        str_detect(Gene, regex("tet\\(W\\)", ignore_case = TRUE)) ~ "tetW",
+                        str_detect(Gene, regex("meca", ignore_case = TRUE)) ~ "mecA",
+                        str_detect(Gene, regex("ermb", ignore_case = TRUE)) ~ "ermB",
+                        str_detect(Gene, regex("vana", ignore_case = TRUE)) ~ "vanA",
+                        str_detect(Gene, regex("vanb", ignore_case = TRUE)) ~ "vanB",
+                        str_detect(Gene, regex("cfra", ignore_case = TRUE)) ~ "cfrA",
+                        str_detect(Gene, regex("qnra", ignore_case = TRUE)) ~ "QnrA",
+                        str_detect(Gene, regex("sul1", ignore_case = TRUE)) ~ "sul1",
+                        str_detect(Gene, regex("sul2", ignore_case = TRUE)) ~ "sul2",
+                        str_detect(Gene, regex("sul3", ignore_case = TRUE)) ~ "sul3",
+                        str_detect(Gene, regex("qnrs", ignore_case = TRUE)) ~ "qnrS",
+                        str_detect(Gene, regex("qac", ignore_case = TRUE)) ~ "qac",
+                        .default = Gene)) %>%
+
+
+
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_ab,`Model Name`,
+                #`Drug Class`, `Resistance Mechanism`, class, mechanism, group,
+                card_edited_drug_class) %>% 
+  
+  
+  # #filter dates
+  # filter(
+  #   (Type == "H_WW" & Date %in% dates) |
+  #   (Type != "H_WW")
+  # ) %>% 
+  
+  mutate(
+    TypeLabel = case_when(Type == "H_WW" ~ "Wastewater", 
+                          Type == "Drain" ~ "Sink Biofilm", 
+                          Type == "Endcap" ~ "Sewer Biofilm", 
+                          TRUE ~ as.character(Type)),
+    Month = format(as.Date(Date), "%m-%Y")
+  ) %>% 
+  
+  #distinct genes per sample id, date, sample type, etc.
+  distinct(Gene,SampleID,Date,Location,Type,card_edited_drug_class,rel_ab,TypeLabel,Month,`Model Name`)
+  
+  # 3. Check if you missed anything
+print(paste("Original genes in list:", length(unique(target_genes))))
+print(paste("Genes found in dataframe:", length(unique(df$`Model Name`))))
+         
+#Create duplicate rows so mcr 5.1 is included inthe broader mcr count
+# Define your overlaps here
+overlaps <- tribble(
+  ~Specific,   ~Broad,
+  "mcr-5.1",   "mcr",
+  "mcr-4.3",   "mcr",
+  "mcr-1",   "mcr",
+  "mcr-2",   "mcr",
+  "mcr-3",   "mcr",
+  "mcr-4",   "mcr",
+  "mcr-5",   "mcr",
+  "mcr-6",   "mcr",
+  "mcr-7",   "mcr",
+  "mcr-8",   "mcr",
+  "mcr-9",   "mcr",
+  "mcr-10",   "mcr",
+  "bla-CTX-M-1",   "bla-CTX-M"
+)
+
+# Create the duplicated rows based on the overlap table
+extra_rows <- df %>%
+  inner_join(overlaps, by = c("Gene" = "Specific")) %>%
+  mutate(Gene = Broad) %>%  # Re-label the specific gene as the Broad name
+  dplyr::select(-Broad)     # Remove the helper column
+
+# Combine back with your original data
+df_expanded <- bind_rows(df, extra_rows)
+  
+  
+# Count detects per gene × Type
+df_detects <- df_expanded %>%
+  mutate(detect = rel_ab > 0) %>% 
+  
+  #distinct genes per sample id, date, sample type, etc.
+  distinct(Gene,SampleID,Date,Location,Type,card_edited_drug_class,detect,TypeLabel,Month) %>% 
+  
+  group_by(Gene, Type) %>%
+  summarise(
+    n_detects_type = sum(detect, na.rm = TRUE),   # how many samples detected?
+    .groups = "drop"
+  ) %>%
+  ungroup()
+
+# Total detects per species (for ordering)
+detect_order <- df_detects %>%
+  group_by(Gene) %>%
+  summarise(n_detects = sum(n_detects_type)
+         #, .groups = "drop"
+         ) %>%
+  arrange(desc(n_detects))
+
+# compute detection + average rel_ab
+df_ranks_type <- df_detects %>%
+  left_join(detect_order, by = "Gene") %>%
+  
+mutate(ID = rank(-n_detects_type, ties.method = "first")) %>%
+  
+  mutate(
+    Gene = factor(
+      Gene,
+      levels = unique(Gene[order(n_detects, -n_detects_type)])
+    )
+  ) %>% 
+  
+  mutate(
+    TypeLabel = case_when(
+      Type == "H_WW" ~ "Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain" ~ "Sink Biofilm",
+      .default = Type
+    ),
+    TypeLabel = factor(TypeLabel, 
+                       levels = c("Wastewater", 
+                                  "Sewer Biofilm", 
+                                  "Sink Biofilm")),
+    type_num = as.numeric(TypeLabel)
+  ) %>% 
+  
+  mutate(
+    Gene_label = fct_reorder(Gene, n_detects, .desc = FALSE)
+  )
+  
+
+
+#Plot-------------
+max_detect <- max(df_ranks_type$n_detects)
+
+# candidate step
+raw_step <- max_detect / 4
+
+# function to snap to nice values (2, 5, 10, etc.)
+nice_step <- function(x) {
+  base <- 10^floor(log10(x))
+  if (x/base <= 2) return(2 * base)
+  if (x/base <= 5) return(5 * base)
+  return(10 * base)
+}
+
+break_step <- 5
+
+
+bars <- 
+  df_ranks_type %>% 
+  ggplot(aes(Gene_label, -n_detects_type)) +
+    geom_col(aes(fill = TypeLabel),
+             #color = "white",
+             size = .5,
+             width = 1.02) +
+    # geom_curve(aes(x = 51.2, xend = 47, 
+    #                y = -148, yend = -166),
+    #            curvature = -.4) +
+    # annotate("text", x = 47, y = -300, 
+    #          label = "Each rectangle represents\none song included in the\nBBC ranking, its length\n the total points and the\ncolor indicates the rank",
+    #          family = "Chivo",
+    #          size = 2,
+    #          lineheight = .9) +
+    # annotate("text", x = 21.5, y = -120, 
+    #          label = 'The Top Artists featured in the BBC´s\n"Greatest Hip-Hop Songs of All Time"',
+    #          family = "Chivo",
+    #          fontface = "bold",
+    #          size = 4,
+    #          lineheight = .9) +
+    # annotate("text", x = 17, y = -120,
+    #          label = 'In Autumn 2019, 108 hip-hop and music experts ranked their 5 favorites out of\n311 nominated songs in an online survey by the BBC. The graphic shows points\nscored in total and per song for the top ranked artists and broken down by era.',
+    #          family = "Chivo",
+    #          fontface = "bold",
+    #          color = "grey30",
+    #          size = 2.5,
+    #          lineheight = .9) +
+    coord_flip(clip = "off") +
+    scale_x_discrete(position = "top") +
+    scale_y_continuous(
+      expand = c(.02, .02),
+      limits = c(
+        -max_detect - max_detect/4,
+        0
+      ),
+      breaks = seq(
+        -ceiling(max_detect / break_step) * break_step,
+        0,
+        by = break_step
+      ),
+      labels = function(x) abs(as.integer(x)),
+      position = "right"
+    )+
+    # nord::scale_fill_nord(palette = "halifax_harbor",discrete = T,reverse = F
+    #                       #guide = F
+    #                       ) +
+    # scale_fill_viridis_d(option = "D")+
+   scale_fill_manual(values = c("#6d7ecd", "#9fdeca", "#c86c69"))+
+    #scale_fill_manual(values = fortyfive_pal)+
+    theme(
+          axis.text.y.right = element_blank(),
+          axis.ticks.x = element_line(color = "black"),
+          axis.ticks.length = unit(0.5, "pt"),
+          #axis.text.y.right = element_markdown(hjust = .5,size = 10),
+          axis.text.x = element_text(size = 8),
+          axis.text.y = element_text(size = 12),
+          axis.title = element_text(size = 16),
+          legend.position = "left",
+          legend.text = element_text(size = 17),
+          plot.margin = margin(5, 0, 5, 5)) +
+    labs(x = NULL, 
+         fill = "",
+         y = "Number of ARG detections")
+
+dots <- df_ranks_type %>% 
+
+  ggplot(aes(Gene_label, type_num, group = Gene_label)) +
+    geom_point(aes(Gene_label, 1), color = "white", size = 2,show.legend = FALSE) +
+    geom_point(aes(Gene_label, 2), color = "white", size = 2,show.legend = FALSE,) +
+    geom_point(aes(Gene_label, 3), color = "white", size = 2,show.legend = FALSE) +
+  
+    geom_segment(aes(x = Gene_label, xend = Gene_label, 
+                     y = 1, yend = 3), 
+                 color = "white",
+                 size = .06) +
+    geom_line(color = "black",
+              show.legend = FALSE,
+              size = .03) +
+    geom_point(aes(fill = TypeLabel, size = n_detects_type),
+               show.legend = FALSE,
+               shape = 21,
+               color = "black",
+               stroke = 0.3) +
+  # geom_point(aes(fill = TypeLabel, size = n_detects_type), 
+  #          shape = 21, 
+  #          color = "black", 
+  #          stroke = 1) +
+
+    #geom_curve(aes(x = 47, xend = 51, 
+    # geom_curve(aes(x = 45, xend = 49, 
+    #                y = 6.1, yend = 4.3),
+    #            curvature = .4) +
+    #annotate("text", x = 45.1, y = 6.1, 
+    # annotate("text", x = 43.1, y = 6.1, 
+    #          label = "The dot size indicates\nthe number of songs,\nthe dot color the best\nrank in each era",
+    #          family = "Chivo",
+    #          size = 3.8, 
+    #          lineheight = .9) +
+    coord_flip() +
+    scale_y_continuous(limits = c(.5, 7.3),
+                       breaks = 1:3,
+                       labels = c("Wastewater", 
+                                  "Sewer Biofilm", 
+                                  "Sink Biofilm"), 
+                       position = "right") +
+  scale_size(range = c(0.9, 2.2), guide = FALSE)+
+  #scale_size(range = c(2, 5.5), guide = F) +
+  scale_fill_manual(values = c("#6d7ecd", "#9fdeca", "#c86c69"))+
+  # scale_fill_viridis_d(option = "D")+
+    # nord::scale_fill_nord(palette = "halifax_harbor", discrete = T, reverse = F, guide = F) +
+  #scale_fill_manual(values = fortyfive_pal)+
+    theme(axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.text.x = element_text(size = 11, 
+                                     #face = "bold", 
+                                     hjust = .1, vjust = 0, angle = 45),
+          #axis.text.y = element_blank(),
+          axis.text.y = element_text(size = 12),
+          plot.margin = margin(5, 5, 5, 0),
+          plot.caption = element_text(face = "bold", color = "grey30", 
+                                      size = 7, margin = margin(t = 15))) +
+  guides(shape = "none", color = "none", size = "none")+
+    labs(x = NULL, y = NULL,
+         caption = "")
+
+
+
+plot = bars + dots + plot_layout(widths = c(1, .5))
+
+#plot_spacer() + bars + dots + plot_layout(widths = c(1, .35), heights = c(.1, 1))
+# Tell showtext exactly what resolution you'll be using later
+showtext_opts(dpi = 300)
+
+
+ggsave(path = "Biofilm Project Figures",file="CARD-Upset Plot Detections per Top ARGs-only relevant-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=7, height= 5.5,dpi = 300)
+ggsave(path = "Biofilm Project Figures",file="CARD-Upset Plot Detections per Top ARGs-only relevant-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=7, height=5.5)
+
+print(plot)
+
+```
+
+##Upset Plot - Drug Classes by Presence Absence- All Sites in One-ONLY SHARED DATES WITH BIOFILM
+```{r eval=FALSE, include=FALSE}
+#theme set----------
+font_add_google("Chivo", "Chivo")
+font_add_google("Passion One", "Passion One")
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Chivo"))
+
+theme_update(axis.text.x = element_text(size = 11, color = "grey20"),
+             axis.text.y = element_text(size = 13, color = "black", face = "bold"),
+             axis.ticks.x = element_line(color = "grey45"),
+             axis.ticks.y = element_blank(),
+             axis.ticks.length.x = unit(.4, "lines"),
+             panel.grid = element_blank(),
+             plot.background = element_rect(fill = "grey60", color = "grey60"))
+
+font_add_google("Reem Kufi", "Reem Kufi")   # <-- REQUIRED
+showtext_auto()                             # <-- activates showtext
+
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Reem Kufi", base_size = 12))
+
+theme_update(
+  plot.title = element_text(size = 27,
+                            face = "bold",
+                            hjust = .5,
+                            margin = margin(10, 0, 30, 0)),
+  plot.caption = element_text(size = 9,
+                              color = "grey40",
+                              hjust = .5,
+                              margin = margin(20, 0, 5, 0)),
+  axis.text.y = element_blank(),
+  axis.title = element_blank(),
+  plot.background = element_rect(fill = "grey88", color = NA),
+  panel.background = element_rect(fill = NA, color = NA),
+  panel.grid = element_blank(),
+  panel.spacing.y = unit(0, "lines"),
+  strip.text.y = element_blank(),
+  legend.position = "bottom",
+  legend.text = element_text(size = 9, color = "grey40"),
+  legend.box.margin = margin(t = 30), 
+  legend.background = element_rect(color = "grey40", 
+                                   size = .3, 
+                                   fill = "grey95"),
+  legend.key.height = unit(.25, "lines"),
+  legend.key.width = unit(2.5, "lines"),
+  plot.margin = margin(rep(20, 4))
+)
+
+#R prep---------------------------------------
+## packages
+library(tidyverse)
+library(dplyr)
+library(patchwork)
+library(ggtext)
+library(showtext)
+library(sysfonts)
+library(ggplot2)
+library(ggstatsplot)
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(OTUtable)
+library(vegan)
+library(MASS)
+library(ggtext)
+library(ggupset)
+library(forcats)
+
+font_add_google("Chivo", "Chivo")
+font_add_google("Passion One", "Passion One")
+
+## ggplot theme
+theme_set(theme_minimal(base_family = "Chivo"))
+
+theme_update(axis.text.x = element_text(size = 11, color = "grey10"),
+             axis.text.y = element_text(size = 13, color = "black", face = "bold"),
+             axis.ticks.x = element_line(color = "white"),
+             axis.ticks.y = element_blank(),
+             axis.ticks.length.x = unit(.4, "lines"),
+             title = element_text(size = 55),
+             panel.grid = element_blank(),
+             plot.background = element_rect(fill = "white", color = "white"))
+
+#R data -------------------------
+dates = c("2024-09-09", "2024-09-11", "2024-09-12", "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09")
+
+# Specify locations to include
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+
+#final_list = c( "bla-CTX-M", "tetA", "vanA","sul1")
+
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW"),
+    Location %in% locations
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    rel_ab = as.numeric(rel_abundance),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(rel_ab = as.numeric(rel_abundance),
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+
+#dataframe
+df <- filtered_df %>% 
+  
+  
+  #clean ontology df
+  dplyr::select(card_edited_drug_class,SampleID, Date, Location, Type,rel_ab
+                #`Drug Class`, `Resistance Mechanism`, class, mechanism, group,
+                ) %>% 
+
+  
+  # #filter dates
+  # filter(
+  #   (Type == "H_WW" & Date %in% dates) |
+  #   (Type != "H_WW")
+  # ) %>% 
+  
+  mutate(
+    TypeLabel = case_when(Type == "H_WW" ~ "Wastewater", 
+                          Type == "Drain" ~ "Sink Biofilm", 
+                          Type == "Endcap" ~ "Sewer Biofilm", 
+                          TRUE ~ as.character(Type)),
+    Month = format(as.Date(Date), "%m-%Y")
+  ) %>% 
+
+  
+  #distinct genes per sample id, date, sample type, etc.
+  distinct(card_edited_drug_class,SampleID,Date,Location,Type,rel_ab,TypeLabel,Month)
+         
+  
+  
+# Count detects per gene × Type
+df_detects <- df %>%
+  mutate(detect = rel_ab > 0) %>% 
+  
+  #distinct genes per sample id, date, sample type, etc.
+  distinct(card_edited_drug_class,SampleID,Date,Location,Type,detect,TypeLabel,Month) %>% 
+  
+  group_by(card_edited_drug_class, Type) %>%
+  summarise(
+    n_detects_type = sum(detect, na.rm = TRUE),   # how many samples detected?
+    .groups = "drop"
+  ) %>%
+  ungroup()
+
+# Total detects per species (for ordering)
+detect_order <- df_detects %>%
+  group_by(card_edited_drug_class) %>%
+  summarise(n_detects = sum(n_detects_type)
+         #, .groups = "drop"
+         ) %>%
+  arrange(desc(n_detects))
+
+# compute detection + average rel_ab
+df_ranks_type <- df_detects %>%
+  left_join(detect_order, by = "card_edited_drug_class") %>%
+  
+mutate(ID = rank(-n_detects_type, ties.method = "first")) %>%
+  
+  mutate(
+    card_edited_drug_class = factor(
+      card_edited_drug_class,
+      levels = unique(card_edited_drug_class[order(n_detects, -n_detects_type)])
+    )
+  ) %>% 
+  
+  mutate(
+    TypeLabel = case_when(
+      Type == "H_WW" ~ "Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain" ~ "Sink Biofilm",
+      .default = Type
+    ),
+    TypeLabel = factor(TypeLabel, 
+                       levels = c("Wastewater", 
+                                  "Sewer Biofilm", 
+                                  "Sink Biofilm")),
+    type_num = as.numeric(TypeLabel)
+  ) %>% 
+  
+  mutate(
+    class_label = fct_reorder(card_edited_drug_class, n_detects, .desc = FALSE)
+  )
+  
+
+
+#Plot-------------
+max_detect <- max(df_ranks_type$n_detects)
+
+# candidate step
+raw_step <- max_detect / 4
+
+# function to snap to nice values (2, 5, 10, etc.)
+nice_step <- function(x) {
+  base <- 10^floor(log10(x))
+  if (x/base <= 2) return(2 * base)
+  if (x/base <= 5) return(5 * base)
+  return(10 * base)
+}
+
+break_step <- 10
+
+
+bars <- 
+  df_ranks_type %>% 
+  ggplot(aes(class_label, -n_detects_type)) +
+    geom_col(aes(fill = TypeLabel),
+             #color = "white",
+             size = .5,
+             width = 1.02) +
+    # geom_curve(aes(x = 51.2, xend = 47, 
+    #                y = -148, yend = -166),
+    #            curvature = -.4) +
+    # annotate("text", x = 47, y = -300, 
+    #          label = "Each rectangle represents\none song included in the\nBBC ranking, its length\n the total points and the\ncolor indicates the rank",
+    #          family = "Chivo",
+    #          size = 2,
+    #          lineheight = .9) +
+    # annotate("text", x = 21.5, y = -120, 
+    #          label = 'The Top Artists featured in the BBC´s\n"Greatest Hip-Hop Songs of All Time"',
+    #          family = "Chivo",
+    #          fontface = "bold",
+    #          size = 4,
+    #          lineheight = .9) +
+    # annotate("text", x = 17, y = -120,
+    #          label = 'In Autumn 2019, 108 hip-hop and music experts ranked their 5 favorites out of\n311 nominated songs in an online survey by the BBC. The graphic shows points\nscored in total and per song for the top ranked artists and broken down by era.',
+    #          family = "Chivo",
+    #          fontface = "bold",
+    #          color = "grey30",
+    #          size = 2.5,
+    #          lineheight = .9) +
+    coord_flip(clip = "off") +
+    scale_x_discrete(position = "top") +
+    scale_y_continuous(
+      expand = c(.02, .02),
+      limits = c(
+        -max_detect - max_detect/4,
+        0
+      ),
+      breaks = seq(
+        -ceiling(max_detect / break_step) * break_step,
+        0,
+        by = break_step
+      ),
+      labels = function(x) abs(as.integer(x)),
+      position = "right"
+    )+
+    # nord::scale_fill_nord(palette = "halifax_harbor",discrete = T,reverse = F
+    #                       #guide = F
+    #                       ) +
+    #scale_fill_viridis_d(option = "D")+
+   scale_fill_manual(values = c("#6d7ecd", "#9fdeca", "#c86c69"))+
+    #scale_fill_manual(values = fortyfive_pal)+
+    theme(
+          axis.text.y.right = element_blank(),
+          #axis.text.y.right = element_markdown(hjust = .5,size = 10),
+          axis.ticks.x = element_line(color = "black"),
+          axis.ticks.length = unit(0.5, "pt"),
+          axis.text.x = element_text(size = 44),
+          axis.title = element_text(size = 62,face = "bold"),
+          legend.position = "left",
+          legend.text = element_text(size = 58),
+          plot.margin = margin(5, 0, 5, 5)) +
+    labs(x = NULL, 
+         fill = "",
+         y = "Number of ARG detections")
+
+dots <- df_ranks_type %>% 
+
+  ggplot(aes(class_label, type_num, group = class_label)) +
+    geom_point(aes(class_label, 1), color = "white", size = 2,show.legend = FALSE) +
+    geom_point(aes(class_label, 2), color = "white", size = 2,show.legend = FALSE,) +
+    geom_point(aes(class_label, 3), color = "white", size = 2,show.legend = FALSE) +
+  
+    geom_segment(aes(x = class_label, xend = class_label, 
+                     y = 1, yend = 3), 
+                 color = "white",
+                 size = .06) +
+    geom_line(color = "black",
+              show.legend = FALSE,
+              size = .03) +
+    geom_point(aes(fill = TypeLabel, size = n_detects_type),
+               show.legend = FALSE,
+               shape = 21,
+               color = "black",
+               stroke = 0.3) +
+  # geom_point(aes(fill = TypeLabel, size = n_detects_type), 
+  #          shape = 21, 
+  #          color = "black", 
+  #          stroke = 1) +
+
+    #geom_curve(aes(x = 47, xend = 51, 
+    # geom_curve(aes(x = 45, xend = 49, 
+    #                y = 6.1, yend = 4.3),
+    #            curvature = .4) +
+    #annotate("text", x = 45.1, y = 6.1, 
+    # annotate("text", x = 43.1, y = 6.1, 
+    #          label = "The dot size indicates\nthe number of songs,\nthe dot color the best\nrank in each era",
+    #          family = "Chivo",
+    #          size = 3.8, 
+    #          lineheight = .9) +
+    coord_flip() +
+    scale_y_continuous(limits = c(.5, 7.3),
+                       breaks = 1:3,
+                       labels = c("Wastewater", 
+                                  "Sewer Biofilm", 
+                                  "Sink Biofilm"), 
+                       position = "right") +
+  scale_size(range = c(0.9, 2.2), guide = FALSE)+
+  #scale_size(range = c(2, 5.5), guide = F) +
+  # scale_fill_viridis_d(option = "D")+
+  scale_fill_manual(values = c("#6d7ecd", "#9fdeca", "#c86c69"))+
+    #nord::scale_fill_nord(palette = "halifax_harbor", discrete = T, reverse = F, guide = F) +
+  # scale_fill_manual(values = fortyfive_pal)+
+    theme(axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.text.x = element_text(size = 43, face = "bold", 
+                                     hjust = .1, vjust = 0, angle = 35),
+          #axis.text.y = element_blank(),
+          axis.text.y = element_text(size = 45),
+          plot.margin = margin(5, 5, 5, 0),
+          plot.caption = element_text(face = "bold", color = "grey30", 
+                                      size = 32, margin = margin(t = 15))) +
+  guides(shape = "none", color = "none", size = "none")+
+    labs(x = NULL, y = NULL,
+         caption = "")
+
+
+
+plot = bars + dots + plot_layout(widths = c(1, .35))
+
+#plot_spacer() + bars + dots + plot_layout(widths = c(1, .35), heights = c(.1, 1))
+
+
+
+ggsave(path = "Biofilm Project Figures",file="CARD-Upset Plot Detections per drug classes-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=13, height= 8,dpi = 900)
+ggsave(path = "Biofilm Project Figures",file="CARD-UpSet plot of drug classes-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=13, height=8)
+
+print(plot)
+
+```
+
+
+#Stacked Bars
+##stacked bars  sink biofilm v sewer biofilm v ww (facet nested by Location and Type) only top 25 species averaged in sewer branch biofilm across all locations -- x axis is unique sample type and date combination as row numbers 
+```{r}
+
+
+# Specify locations to include
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(viridis)
+library(ggh4x)
+
+# ---------- STEP 1: Extract and clean ----------
+
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_abundance,`Drug Class`, `Resistance Mechanism`, class, mechanism, group) %>% 
+  
+  mutate(rel_ab = as.numeric(rel_abundance)) %>% 
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Drain", "Endcap", "H_WW")) %>% 
+  
+  #
+  mutate(
+    Type = factor(Type, levels = c("Drain", "Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type)),
+    Month = format(as.Date(Date), "%m-%Y")
+  ) 
+
+
+# ---------- STEP 2: Collapse into top 25 species ----------
+# get top 25 globally by total rel_ab
+top25_args <- df %>%
+  filter(Type == "Endcap") %>% 
+  group_by(Gene) %>%
+  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ab)) %>%
+  slice_head(n = 11) %>%
+  pull(Gene)
+
+# assign species or "Other"
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab) %>%
+  mutate(
+    Type = case_when(
+      Type == "H_WW"   ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain"  ~ "Sink Biofilm",
+      .default = Type
+    ),
+    class = factor(ifelse(Gene %in% top25_args, Gene, "Other")),
+    Type  = factor(Type, levels = c("Sink Biofilm", "Sewer Biofilm", "Hospital Wastewater"))
+  )
+
+# ---------- STEP 3: Plot ----------
+
+library(RColorBrewer)
+ref = "Other"
+length(levels(plot_df$class))
+myColors <- brewer.pal(length(levels(plot_df$class)),"Set3")
+names(myColors) <- levels(plot_df$class)
+myColors[names(myColors)==ref] <- "grey"
+
+
+library(dplyr)
+library(ggplot2)
+library(ggh4x)
+library(ggtext)   # for element_markdown
+
+# 1) Build a per-facet ordering of samples (one row per unique sample)
+sample_order <- plot_df %>%
+  distinct(Location, Type, SampleID, Date) %>%
+  group_by(Location, Type) %>%
+  arrange(Date, SampleID, .by_group = TRUE) %>%
+  mutate(
+    Event = row_number(),                                # 1..N per facet (no gaps)
+    EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
+  ) %>%
+  ungroup()
+
+# 2) Join that back so every row has its facet-local Event index
+plot_df2 <- plot_df %>%
+  left_join(sample_order, by = c("Location","Type","SampleID","Date"))
+
+
+
+
+# 3) Plot using Event (factor) on x → no gaps within each facet
+ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Location ~ Type, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = myColors
+                    ) +
+  labs(x = NULL, y = "Fraction of Annotated Reads", fill = "ARGs") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(fill = "white", colour = "black"),
+    strip.text       = element_text(face = "bold"),
+    axis.text.x      = element_blank(),
+    panel.spacing    = unit(0.05, "lines"),
+    legend.position  = "bottom",
+    legend.key.size  = unit(0.05, "cm"),
+    legend.text      = ggtext::element_markdown(size = 8)   # allow markdown (italics) in legend
+  )
+
+
+
+
+
+
+
+```
+
+##stacked bars  sink biofilm v sewer biofilm v ww (facet nested by Location and Type) genes across all locations -- x axis is unique sample type and date combination as row numbers -- this time out of 100- total number of pathogens as the denominator 
+```{r}
+
+
+# Specify locations to include
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+# AMR genes
+amr_genes <- c("blaTEM", "blaSHV", "blaCTX-M", "blaOXA", "blaKPC", "blaNDM", "blaVIM", "blaIMP",
+               "mecA", "vanA", "vanB", "ermB", "tetM", "tetO", "aac(3)-I", "aph(3')-IIIa",
+               "strA", "strB","sul1", "sul2", "dfrA", "dfrB", "qnrA", "qnrB", "qnrS")
+
+
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(viridis)
+library(ggh4x)
+
+# ---------- STEP 1: Extract and clean ----------
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_abundance,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  mutate(rel_ab = as.numeric(rel_abundance)) %>% 
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Drain", "Endcap", "H_WW")) %>% 
+  
+  #
+  mutate(
+    Type = factor(Type, levels = c("Drain", "Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type)),
+    Month = format(as.Date(Date), "%m-%Y")
+  ) %>% 
+  
+  # make denominator of relative abundance total counts for rpip targets
+  group_by(SampleID, Location, Type) %>%
+  mutate(rel_ab = rel_ab / sum(rel_ab, na.rm = TRUE)) %>%
+  ungroup()
+
+# ---------- STEP 2: Collapse into top 25 species ----------
+# get top ___ globally by total rel_ab
+top25_args <- df %>%
+  filter(Type == "Endcap") %>% 
+  group_by(Gene) %>%
+  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ab)) %>%
+  slice_head(n = 10) %>%
+  pull(Gene)
+
+# assign species or "Other"
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab) %>%
+  mutate(
+    Type = case_when(
+      Type == "H_WW"   ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain"  ~ "Sink Biofilm",
+      .default = Type
+    ),
+    class = factor(ifelse(Gene %in% top25_args, Gene, "Other")),
+    Type  = factor(Type, levels = c("Sink Biofilm", "Sewer Biofilm", "Hospital Wastewater"))
+  )
+
+# ---------- STEP 3: Plot ----------
+
+#colors
+# ref = "Other"
+# length(levels(plot_df$class))
+# myColors <- brewer.pal(length(levels(plot_df$class)),"Set3")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+#viridis colors
+# ref = "Other"
+# myColors <- viridis(length(levels(plot_df$class)),option = "A")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91","#915493","#3d3d3d")
+
+poster_colors = c("#ce2e2d","#88b8c5","#dd9298","#efc1c0","#fc3b3b","#a61d30","#eededf","#dc6c64","#915493","#3d3d3d")
+
+# Assign colors: first 15 get a palette, "Other" gets grey
+# ref = "Other"
+# myColors <- poster_colors[1:length(levels(plot_df$class))]
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+
+# Assign colors: 
+ref = "Other"
+myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
+names(myColors) <- levels(plot_df$class)
+myColors[names(myColors)==ref] <- "grey"
+
+
+
+##actual plotting-----------
+library(dplyr)
+library(ggplot2)
+library(ggh4x)
+library(ggtext)   # for element_markdown
+
+# 1) Build a per-facet ordering of samples (one row per unique sample)
+sample_order <- plot_df %>%
+  distinct(Location, Type, SampleID, Date) %>%
+  group_by(Location, Type) %>%
+  arrange(Date, SampleID, .by_group = TRUE) %>%
+  mutate(
+    Event = row_number(),                                # 1..N per facet (no gaps)
+    EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
+  ) %>%
+  ungroup()
+
+# 2) Join that back so every row has its facet-local Event index
+plot_df2 <- plot_df %>%
+  left_join(sample_order, by = c("Location","Type","SampleID","Date"))
+
+
+
+# Plot using Event (factor) on x → no gaps within each facet
+
+
+library(scales)  # for percent_format()
+
+plot_df2 <- plot_df2 %>%
+  mutate(Type = case_when(Type =="Sink Biofilm" ~ "Sink\nBiofilm",
+                       Type =="Sewer Biofilm" ~ "Sewer\nBiofilm",
+                       Type == "Hospital Wastewater" ~ "Hospital\nWastewater",
+                       .default = Type))
+
+
+plot = ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Location ~ Type, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),   # plain numbers, no %
+    limits = c(0, 1)                 # optional: keep to 100%
+  ) +
+  labs(x = NULL, y = "Percent of Annotated Reads", fill = "ARGs") +
+theme_minimal(base_size = 11) +
+theme(
+  panel.background = element_rect(fill = "white", colour = "black"),
+  strip.background = element_rect(fill = "white", colour = "black"),
+  strip.text = element_text(
+    face = "bold", 
+    hjust = 0.5,          # center horizontally
+    vjust = 0.5,          # center vertically
+    lineheight = 0.9      # tighter line spacing if wrapped
+  ),
+  axis.text.x        = element_blank(),
+  panel.spacing      = unit(0.05, "lines"),
+  legend.position    = "bottom",
+  legend.key.size    = unit(0.5, "cm"),
+  legend.text        = ggtext::element_markdown(size = 8),
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  panel.grid.major.y = element_blank(),
+  #panel.grid.major.y = element_line(color = "grey80"),
+  panel.grid.minor.y = element_blank(),
+  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
+)
+
+
+print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected.png", plot=plot, width=9, height=5,dpi = 400)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected.svg", plot=plot, width=9, height=5)
+  
+  
+##now vertical-----------
+  
+  plot = ggplot(plot_df2, aes(y = factor(Event), x = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Type ~ Location, scales = "free_y", space = "free_y",switch = "y") +
+  scale_fill_manual(values = myColors,
+                    guide = guide_legend(
+    nrow = 4,              # number of rows in the legend
+    byrow = TRUE,          # fill across rows instead of down columns
+    title.position = "top" # keep the title above
+  )
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),  # plain numbers, no %
+    limits = c(0, 1)
+  ) +
+  labs(y = NULL, x = "Percent of Annotated Reads", fill = "ARGs") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(fill = "white", colour = "black"),
+    strip.text = element_text(
+      face = "bold", 
+      hjust = 0.5,
+      vjust = 0.5,
+      lineheight = 0.9
+    ),
+    axis.text.y        = element_blank(),  # hide if crowded
+    panel.spacing      = unit(0.05, "lines"),
+    legend.position    = "bottom",
+    legend.key.size    = unit(0.5, "cm"),
+    legend.text        = ggtext::element_markdown(size = 8),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.ontop        = FALSE
+  )
+
+  
+  print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected vertical.png", plot=plot, width=6.5, height=10,dpi = 500)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected vertical.svg", plot=plot, width=5, height=9)
+
+
+##now by ARG class-----------
+  
+  # get top 25 globally by total rel_ab
+top25_classes <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, class) %>%
+  drop_na(Type) %>%
+  
+  drop_na(class) %>% 
+  
+  filter(Type == "Endcap") %>% 
+  group_by(class) %>%
+  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ab)) %>%
+  slice_head(n = 10) %>%
+  pull(class)
+
+# assign species or "Other"
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, class) %>%
+  drop_na(Type) %>%
+  
+  drop_na(class) %>% 
+  
+  #dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab) %>%
+  mutate(
+    Type = case_when(
+      Type == "H_WW"   ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain"  ~ "Sink Biofilm",
+      .default = Type
+    ),
+    class = factor(ifelse(class %in% top25_classes, class, "Other")),
+    Type  = factor(Type, levels = c("Sink Biofilm", "Sewer Biofilm", "Hospital Wastewater"))
+  )
+
+
+#colors
+# ref = "Other"
+# length(levels(plot_df$class))
+# myColors <- brewer.pal(length(levels(plot_df$class)),"Set3")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+#viridis colors
+# ref = "Other"
+# myColors <- viridis(length(levels(plot_df$class)),option = "A")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91","#915493","#3d3d3d")
+
+poster_colors = c("#ce2e2d","#88b8c5","#dd9298","#efc1c0","#fc3b3b","#a61d30","#eededf","#dc6c64","#915493","#3d3d3d")
+
+# Assign colors: first 15 get a palette, "Other" gets grey
+ref = "Other"
+myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
+names(myColors) <- levels(plot_df$class)
+myColors[names(myColors)==ref] <- "grey"
+
+
+
+library(dplyr)
+library(ggplot2)
+library(ggh4x)
+library(ggtext)   # for element_markdown
+
+# 1) Build a per-facet ordering of samples (one row per unique sample)
+sample_order <- plot_df %>%
+  distinct(Location, Type, SampleID, Date) %>%
+  group_by(Location, Type) %>%
+  arrange(Date, SampleID, .by_group = TRUE) %>%
+  mutate(
+    Event = row_number(),                                # 1..N per facet (no gaps)
+    EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
+  ) %>%
+  ungroup()
+
+# 2) Join that back so every row has its facet-local Event index
+plot_df2 <- plot_df %>%
+  left_join(sample_order, by = c("Location","Type","SampleID","Date"))
+
+
+
+# Plot using Event (factor) on x → no gaps within each facet
+
+
+library(scales)  # for percent_format()
+
+plot_df2 <- plot_df2 %>%
+  mutate(Type = case_when(Type =="Sink Biofilm" ~ "Sink\nBiofilm",
+                       Type =="Sewer Biofilm" ~ "Sewer\nBiofilm",
+                       Type == "Hospital Wastewater" ~ "Hospital\nWastewater",
+                       .default = Type))
+
+
+plot = ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Location ~ Type, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),   # plain numbers, no %
+    limits = c(0, 1)                 # optional: keep to 100%
+  ) +
+  labs(x = NULL, y = "Percent of Annotated Reads", fill = "") +
+theme_minimal(base_size = 11) +
+theme(
+  panel.background = element_rect(fill = "white", colour = "black"),
+  strip.background = element_rect(fill = "white", colour = "black"),
+  strip.text = element_text(
+    face = "bold", 
+    hjust = 0.5,          # center horizontally
+    vjust = 0.5,          # center vertically
+    lineheight = 0.9      # tighter line spacing if wrapped
+  ),
+  axis.text.x        = element_blank(),
+  panel.spacing      = unit(0.05, "lines"),
+  legend.position    = "bottom",
+  legend.key.size    = unit(0.5, "cm"),
+  legend.text        = ggtext::element_markdown(size = 8),
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  panel.grid.major.y = element_blank(),
+  #panel.grid.major.y = element_line(color = "grey80"),
+  panel.grid.minor.y = element_blank(),
+  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
+)
+
+
+print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class.png", plot=plot, width=9, height=5,dpi = 400)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class.svg", plot=plot, width=9, height=5)
+  
+
+##now vertical-----------
+  
+  plot = ggplot(plot_df2, aes(y = factor(Event), x = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Type ~ Location, scales = "free_y", space = "free_y",switch = "y") +
+  scale_fill_manual(values = myColors,
+                    guide = guide_legend(
+    nrow = 4,              # number of rows in the legend
+    byrow = TRUE,          # fill across rows instead of down columns
+    title.position = "top" # keep the title above
+  )
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),  # plain numbers, no %
+    limits = c(0, 1)
+  ) +
+  labs(y = NULL, x = "Percent of Annotated Reads", fill = "") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(fill = "white", colour = "black"),
+    strip.text = element_text(
+      face = "bold", 
+      hjust = 0.5,
+      vjust = 0.5,
+      lineheight = 0.9
+    ),
+    axis.text.y        = element_blank(),  # hide if crowded
+    panel.spacing      = unit(0.05, "lines"),
+    legend.position    = "bottom",
+    legend.key.size    = unit(0.5, "cm"),
+    legend.text        = ggtext::element_markdown(size = 8),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.ontop        = FALSE
+  )
+
+  
+  print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class vertical.png", plot=plot, width=6.5, height=10,dpi = 500)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class vertical.svg", plot=plot, width=5, height=9)
+  
+  
+##now by CARD ARG Pruden Lab Drug class-----------
+  
+categorized_drug_class = c("Betalactams", "Sulfonamides", "Trimethoprim", "Tetracyclines", "Aminocoumarin", "Aminoglycoside", "Elfamycin", "Fosfomycin", "Glycopeptides", "MLS", "Peptides", "Phenicol", "Quinolones", "Rifamycines")  
+
+keep_classes  = categorized_drug_class
+
+
+# assign species or "Other"
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, card_edited_drug_class) %>%
+  drop_na(Type) %>%
+  
+  
+  #dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab) %>%
+  mutate(
+    Type = case_when(
+      Type == "H_WW"   ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain"  ~ "Sink Biofilm",
+      .default = Type
+    ),
+    class = factor(ifelse(card_edited_drug_class %in% keep_classes, card_edited_drug_class, "Other")),
+    Type  = factor(Type, levels = c("Sink Biofilm", "Sewer Biofilm", "Hospital Wastewater"))
+  )
+
+
+#colors
+# ref = "Other"
+# length(levels(plot_df$class))
+# myColors <- brewer.pal(length(levels(plot_df$class)),"Set3")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+#viridis colors
+# ref = "Other"
+# myColors <- viridis(length(levels(plot_df$class)),option = "A")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91","#915493","#3d3d3d")
+
+poster_colors = c("#ce2e2d","#88b8c5","#dd9298","#efc1c0","#fc3b3b","#a61d30","#eededf","#dc6c64","#915493","#3d3d3d")
+
+# Assign colors: first 15 get a palette, "Other" gets grey
+ref = "Other"
+myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
+names(myColors) <- levels(plot_df$class)
+myColors[names(myColors)==ref] <- "grey"
+
+
+
+library(dplyr)
+library(ggplot2)
+library(ggh4x)
+library(ggtext)   # for element_markdown
+
+# 1) Build a per-facet ordering of samples (one row per unique sample)
+sample_order <- plot_df %>%
+  distinct(Location, Type, SampleID, Date) %>%
+  group_by(Location, Type) %>%
+  arrange(Date, SampleID, .by_group = TRUE) %>%
+  mutate(
+    Event = row_number(),                                # 1..N per facet (no gaps)
+    EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
+  ) %>%
+  ungroup()
+
+# 2) Join that back so every row has its facet-local Event index
+plot_df2 <- plot_df %>%
+  left_join(sample_order, by = c("Location","Type","SampleID","Date"))
+
+
+
+# Plot using Event (factor) on x → no gaps within each facet
+
+
+library(scales)  # for percent_format()
+
+plot_df2 <- plot_df2 %>%
+  mutate(Type = case_when(Type =="Sink Biofilm" ~ "Sink\nBiofilm",
+                       Type =="Sewer Biofilm" ~ "Sewer\nBiofilm",
+                       Type == "Hospital Wastewater" ~ "Hospital\nWastewater",
+                       .default = Type))
+
+
+plot = ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Location ~ Type, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),   # plain numbers, no %
+    limits = c(0, 1)                 # optional: keep to 100%
+  ) +
+  labs(x = NULL, y = "Percent of Annotated Reads", fill = "") +
+theme_minimal(base_size = 11) +
+theme(
+  panel.background = element_rect(fill = "white", colour = "black"),
+  strip.background = element_rect(fill = "white", colour = "black"),
+  strip.text = element_text(
+    face = "bold", 
+    hjust = 0.5,          # center horizontally
+    vjust = 0.5,          # center vertically
+    lineheight = 0.9      # tighter line spacing if wrapped
+  ),
+  axis.text.x        = element_blank(),
+  panel.spacing      = unit(0.05, "lines"),
+  legend.position    = "bottom",
+  legend.key.size    = unit(0.5, "cm"),
+  legend.text        = ggtext::element_markdown(size = 8),
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  panel.grid.major.y = element_blank(),
+  #panel.grid.major.y = element_line(color = "grey80"),
+  panel.grid.minor.y = element_blank(),
+  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
+)
+
+
+print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Pruden Lab Drug Class.png", plot=plot, width=9, height=5,dpi = 400)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Pruden Lab Drug Class.svg", plot=plot, width=9, height=5)
+  
+#for slides
+  
+plot = ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Location ~ Type, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),   # plain numbers, no %
+    limits = c(0, 1)                 # optional: keep to 100%
+  ) +
+  labs(x = NULL, y = "Percent of Annotated Reads", fill = "", title = "") +
+theme_minimal(base_size = 11) +
+theme(
+  panel.background = element_rect(fill = "white", colour = "black"),
+  strip.background = element_rect(fill = "white", colour = "black"),
+  strip.text = element_text(
+    face = "bold", 
+    hjust = 0.5,          # center horizontally
+    vjust = 0.5,          # center vertically
+    lineheight = 0.9      # tighter line spacing if wrapped
+  ),
+  axis.text.x        = element_blank(),
+  panel.spacing      = unit(0.05, "lines"),
+  legend.position    = "bottom",
+  legend.key.size    = unit(0.1, "cm"),
+  legend.spacing.x = unit(0.2, "cm"),   # space between items horizontally
+  legend.spacing.y = unit(0.2, "cm"),    # space between rows if wrapped
+  legend.text        = ggtext::element_markdown(size = 7.5),
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  panel.grid.major.y = element_blank(),
+  legend.key.width  = unit(1, "cm"),
+  legend.key.height = unit(0.5, "cm"),
+  #panel.grid.major.y = element_line(color = "grey80"),
+  panel.grid.minor.y = element_blank(),
+  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
+)+
+  guides(fill = guide_legend(ncol = 3))
+
+
+print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Pruden Lab Drug Class-slides.png", plot=plot, width=7, height=8,dpi = 600)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Pruden Lab Drug Class-slides.svg", plot=plot, width=7, height=8)
+  
+
+##now vertical-----------
+  
+  plot = ggplot(plot_df2, aes(y = factor(Event), x = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Type ~ Location, scales = "free_y", space = "free_y",switch = "y") +
+  scale_fill_manual(values = myColors,
+                    guide = guide_legend(
+    nrow = 4,              # number of rows in the legend
+    byrow = TRUE,          # fill across rows instead of down columns
+    title.position = "top" # keep the title above
+  )
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),  # plain numbers, no %
+    limits = c(0, 1)
+  ) +
+  labs(y = NULL, x = "Percent of Annotated Reads", fill = "") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(fill = "white", colour = "black"),
+    strip.text = element_text(
+      face = "bold", 
+      hjust = 0.5,
+      vjust = 0.5,
+      lineheight = 0.9
+    ),
+    axis.text.y        = element_blank(),  # hide if crowded
+    panel.spacing      = unit(0.05, "lines"),
+    legend.position    = "bottom",
+    legend.key.size    = unit(0.5, "cm"),
+    legend.text        = ggtext::element_markdown(size = 8),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.ontop        = FALSE
+  )
+
+  
+  print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class vertical.png", plot=plot, width=6.5, height=10,dpi = 500)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class vertical.svg", plot=plot, width=5, height=9)
+
+
+
+
+```
+
+
+
+
+
+##stacked bars  sink biofilm v sewer biofilm v ww (facet nested by Location and Type) genes across all locations -- x axis is unique sample type and date combination as row numbers -- this time out of 100- total number of pathogens as the denominator-ONLY SHARED DATES FOR WW WITH BIOFILM
+```{r}
+#specify dates
+dates <- as.Date(c(
+  "2024-09-09", "2024-09-11", "2024-09-12",
+  "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09"
+))
+
+
+# Specify locations to include
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+# AMR genes
+amr_genes <- c("blaTEM", "blaSHV", "blaCTX-M", "blaOXA", "blaKPC", "blaNDM", "blaVIM", "blaIMP",
+               "mecA", "vanA", "vanB", "ermB", "tetM", "tetO", "aac(3)-I", "aph(3')-IIIa",
+               "strA", "strB","sul1", "sul2", "dfrA", "dfrB", "qnrA", "qnrB", "qnrS")
+
+
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(viridis)
+library(ggh4x)
+
+# ---------- STEP 1: Extract and clean ----------
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,rel_abundance,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  mutate(rel_ab = as.numeric(rel_abundance)) %>% 
+  
+  mutate(Date = as.Date(Date)) %>% 
+  
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Drain", "Endcap", "H_WW")) %>% 
+  
+  # now replace Site names 
+  mutate(Location = case_when(Location == "MARIO" ~ "Site 1",
+                              Location == "FIONA" ~ "Site 2",
+                              Location == "LUIGI" ~ "Site 3",
+                              Location == "SHREK" ~ "Site 4",
+                              Location == "OSCAR" ~ "Site 5",
+                              .default = Location)) %>% 
+  
+ 
+  #filter dates
+  filter(
+    (Type == "H_WW" & Date %in% dates) |
+    (Type != "H_WW")
+  ) %>% 
+  
+  #
+  mutate(
+    Type = factor(Type, levels = c("Drain", "Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type)),
+    Month = format(as.Date(Date), "%m-%Y")
+  ) %>% 
+  
+  # make denominator of relative abundance total counts for rpip targets
+  group_by(SampleID, Location, Type) %>%
+  mutate(rel_ab = rel_ab / sum(rel_ab, na.rm = TRUE)) %>%
+  ungroup()
+
+# ---------- STEP 2: Collapse into top 25 species ----------
+# get top ___ globally by total rel_ab
+top25_args <- df %>%
+  filter(Type == "Endcap") %>% 
+  group_by(Gene) %>%
+  summarise(total_ab = mean(rel_ab, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ab)) %>%
+  slice_head(n = 10) %>%
+  pull(Gene)
+
+# assign species or "Other"
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab) %>%
+  mutate(
+    Type = case_when(
+      Type == "H_WW"   ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain"  ~ "Sink Biofilm",
+      .default = Type
+    ),
+    class = factor(ifelse(Gene %in% top25_args, Gene, "Other")),
+    Type  = factor(Type, levels = c("Sink Biofilm", "Sewer Biofilm", "Hospital Wastewater"))
+  )
+
+# ---------- STEP 3: Plot ----------
+
+  
+  
+##now by CARD ARG Pruden Lab Drug class-----------
+  
+categorized_drug_class = c("Betalactams", "Sulfonamides", "Trimethoprim", "Tetracyclines", "Aminocoumarin", "Aminoglycoside", "Elfamycin", "Fosfomycin", "Glycopeptides", "MLS", "Peptides", "Phenicol", "Quinolones", "Rifamycines")  
+
+keep_classes  = categorized_drug_class
+
+
+# assign species or "Other"
+plot_df <- df %>%
+  dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab, card_edited_drug_class) %>%
+  drop_na(Type) %>%
+  
+  
+  #dplyr::select(Gene, SampleID, Date, Location, Type, rel_ab) %>%
+  mutate(
+    Type = case_when(
+      Type == "H_WW"   ~ "Hospital Wastewater",
+      Type == "Endcap" ~ "Sewer Biofilm",
+      Type == "Drain"  ~ "Sink Biofilm",
+      .default = Type
+    ),
+    class = factor(ifelse(card_edited_drug_class %in% keep_classes, card_edited_drug_class, "Other")),
+    Type  = factor(Type, levels = c("Sink Biofilm", "Sewer Biofilm", "Hospital Wastewater"))
+  )
+
+
+#colors
+# ref = "Other"
+# length(levels(plot_df$class))
+# myColors <- brewer.pal(length(levels(plot_df$class)),"Set3")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+#viridis colors
+# ref = "Other"
+# myColors <- viridis(length(levels(plot_df$class)),option = "A")
+# names(myColors) <- levels(plot_df$class)
+# myColors[names(myColors)==ref] <- "grey"
+
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91","#915493","#3d3d3d")
+
+poster_colors = c("#ce2e2d","#88b8c5","#dd9298","#efc1c0","#fc3b3b","#a61d30","#eededf","#dc6c64","#915493","#3d3d3d")
+
+# Assign colors: first 15 get a palette, "Other" gets grey
+ref = "Other"
+myColors <- fortyfive_pal[1:length(levels(plot_df$class))]
+names(myColors) <- levels(plot_df$class)
+myColors[names(myColors)==ref] <- "grey"
+
+
+
+library(dplyr)
+library(ggplot2)
+library(ggh4x)
+library(ggtext)   # for element_markdown
+
+# 1) Build a per-facet ordering of samples (one row per unique sample)
+sample_order <- plot_df %>%
+  distinct(Location, Type, SampleID, Date) %>%
+  group_by(Location, Type) %>%
+  arrange(Date, SampleID, .by_group = TRUE) %>%
+  mutate(
+    Event = row_number(),                                # 1..N per facet (no gaps)
+    EventLabel = format(as.Date(Date), "%Y-%m-%d")       # optional: a label you can show
+  ) %>%
+  ungroup()
+
+# 2) Join that back so every row has its facet-local Event index
+plot_df2 <- plot_df %>%
+  left_join(sample_order, by = c("Location","Type","SampleID","Date"))
+
+
+
+# Plot using Event (factor) on x → no gaps within each facet
+
+
+library(scales)  # for percent_format()
+
+plot_df2 <- plot_df2 %>%
+  mutate(Type = case_when(Type =="Sink Biofilm" ~ "Sink\nBiofilm",
+                       Type =="Sewer Biofilm" ~ "Sewer\nBiofilm",
+                       Type == "Hospital Wastewater" ~ "Hospital\nWastewater",
+                       .default = Type))
+
+
+plot = ggplot(plot_df2, aes(x = factor(Event), y = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Location ~ Type, scales = "free_x", space = "free_x",switch = "y") +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),   # plain numbers, no %
+    limits = c(0, 1)                 # optional: keep to 100%
+  ) +
+  labs(x = NULL, y = "Percent of Annotated Reads", fill = "") +
+theme_minimal(base_size = 11) +
+theme(
+  panel.background = element_rect(fill = "white", colour = "black"),
+  strip.background = element_rect(fill = "white", colour = "black"),
+  strip.text = element_text(
+    face = "bold", 
+    hjust = 0.5,          # center horizontally
+    vjust = 0.5,          # center vertically
+    lineheight = 0.9      # tighter line spacing if wrapped
+  ),
+  axis.text.x        = element_blank(),
+  panel.spacing      = unit(0.05, "lines"),
+  legend.position    = "bottom",
+  legend.key.size    = unit(0.5, "cm"),
+  legend.text        = ggtext::element_markdown(size = 4.5),
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  panel.grid.major.y = element_blank(),
+  #panel.grid.major.y = element_line(color = "grey80"),
+  panel.grid.minor.y = element_blank(),
+  panel.ontop        = FALSE   # <- ensures geoms (bars) are drawn over grid lines
+)+
+  guides(
+    fill = guide_legend(ncol = 8)  # <- set number of columns here
+  )
+
+
+print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Pruden Lab Drug Class-ONLY SHARED DATES WITH BIOFILM.png", plot=plot, width=5, height=5,dpi = 400)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Pruden Lab Drug Class-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=5, height=5)
+  
+
+##now vertical-----------
+  
+  plot = ggplot(plot_df2, aes(y = factor(Event), x = rel_ab, fill = class)) +
+  geom_col(position = "stack") +
+  facet_nested(Type ~ Location, scales = "free_y", space = "free_y",switch = "y") +
+  scale_fill_manual(values = myColors,
+                    guide = guide_legend(
+    nrow = 4,              # number of rows in the legend
+    byrow = TRUE,          # fill across rows instead of down columns
+    title.position = "top" # keep the title above
+  )
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 0.25, 0.50, 0.75),   # tick marks at 25, 50, 75
+    labels = c("0","25", "50", "75"),  # plain numbers, no %
+    limits = c(0, 1)
+  ) +
+  labs(y = NULL, x = "Percent of Annotated Reads", fill = "") +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.background = element_rect(fill = "white", colour = "black"),
+    strip.background = element_rect(fill = "white", colour = "black"),
+    strip.text = element_text(
+      face = "bold", 
+      hjust = 0.5,
+      vjust = 0.5,
+      lineheight = 0.9
+    ),
+    axis.text.y        = element_blank(),  # hide if crowded
+    panel.spacing      = unit(0.05, "lines"),
+    legend.position    = "bottom",
+    legend.key.size    = unit(0.5, "cm"),
+    legend.text        = ggtext::element_markdown(size = 8),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.ontop        = FALSE
+  )
+
+  
+  print(plot)
+
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class vertical-ONLY SHARED DATES WITH BIOFILm.png", plot=plot, width=6.5, height=10,dpi = 500)
+  ggsave(path = "Biofilm Project Figures",file="CARD stacked bar plot of ARGs detected by Drug Class vertical-ONLY SHARED DATES WITH BIOFILM.svg", plot=plot, width=5, height=9)
+
+
+
+
+```
+
+
+
+
+
+#MaAsLin
+##Maaslin3-ONLY SHARED DATES WITH BIOFILM- ARGs
+```{r}
+
+#specify dates-------------
+dates <- as.Date(c(
+  "2024-09-09", "2024-09-11", "2024-09-12",
+  "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09"
+))
+
+# Specify locations to include--------
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+
+#libraries--------
+library(ggplot2)
+library(readxl)
+library(here)
+library(cowplot)
+library(tidyverse)
+library(patchwork)
+library(readr)
+library(phyloseq)
+library(microshades)
+library(ape)
+library(vegan)
+library(ggpubr)
+library(rstatix)
+library(RColorBrewer)
+library(maaslin3)
+library(writexl)
+library(ggrepel)
+
+#maaslin3----------------
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    RPKM = as.numeric(RPKM),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,RPKM,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  mutate(Date = as.Date(Date)) %>% 
+  
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Endcap", "H_WW")) %>% 
+ 
+  #filter specific dates shared with biofilm
+  filter(
+    (Type == "H_WW" & Date %in% dates) |
+    (Type != "H_WW")
+  ) %>%
+  
+  #change label names
+  mutate(
+    Type = factor(Type, levels = c("Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type))
+  ) 
+
+df_sum <- df %>%
+  group_by(SampleID, Gene) %>%
+  summarise(
+    RPKM = sum(RPKM, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+otu <- df_sum %>%
+  dplyr::select(SampleID, Gene, RPKM) %>%
+  tidyr::pivot_wider(
+    names_from = Gene,
+    values_from = RPKM,
+    values_fill = 0
+  ) %>%
+  tibble::column_to_rownames("SampleID")
+
+meta <- df %>%
+  dplyr::select(
+    SampleID,
+    Date,
+    Location,
+    Type
+  ) %>%
+  distinct() %>%
+  tibble::column_to_rownames("SampleID")
+
+#MaAsLin3------------------------
+
+fit_data <- maaslin3(
+  input_data = otu,
+  input_metadata = meta,
+  output = "maaslin3_output",
+  fixed_effects = c("Type"),
+  random_effects = c("Location"),
+  normalization = "NONE",
+  transform = "LOG",
+  standardize = TRUE,
+  min_prevalence = 0.1,
+  verbosity = "ERROR"
+)
+
+
+
+#plotting it-------------
+plot_df <- fit_data$normalized %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleID") %>%
+  pivot_longer(
+    cols = -SampleID,
+    names_to = "feature",
+    values_to = "abundance"
+  ) %>%
+  left_join(
+    fit_data$metadata %>%
+      rownames_to_column("SampleID"),
+    by = "SampleID"
+  )
+
+
+#volcano plot----------
+
+#get mean abundance directly from MaAslin3 normalized data
+# Significant features
+sig_abund_joint <- subset(fit_data$fit_data_abundance$results, qval_joint < 0.05)
+sig_prev_joint <- subset(fit_data$fit_data_prevalence$results, qval_joint < 0.05)
+
+
+
+sig_feats <- union(sig_abund_joint$feature, sig_prev_joint$feature)
+
+top_feat <- sig_abund_joint %>%
+  filter(feature %in% sig_feats) %>%
+  arrange(qval_joint)
+
+# Compute mean abundance directly from MaAsLin3 normalized table
+mean_abund <- colMeans(fit_data$normalized[, top_feat$feature, drop = FALSE], na.rm = TRUE)
+top_feat$mean_abund <- mean_abund
+
+# Optionally join extra info if you have a taxonomy table
+# top_feat <- left_join(top_feat, top_feat_unique, by = "feature")
+
+# Example: volcano for a subset of features (adjust as needed)
+b_rg <- top_feat %>%
+  # filter(name.x == "growthregrowth") %>% # if you have a variable for before/regrowth
+  filter(!is.na(feature))  # just keep valid features
+
+# Label a few genera if you have that info
+# b_rg$label_it <- ifelse(b_rg$genus %in% c("Cupriavidus","Ralstonia","Burkholderia","Pseudomonas","Alcaligenes","Stenotrophomonas"), b_rg$genus, NA)
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91")
+
+
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+  # geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+    scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5, 10, 12.5, 15),
+    limits = c(0, 15)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal() +
+  coord_cartesian(clip = "off")
+
+volc
+
+#get top ARGs-------
+
+#label top args in new volcano plot----------
+# Get top ARGs (e.g., top 5 by q-value)
+
+
+top_args <- b_rg %>%
+  arrange(qval_joint) %>%
+  dplyr::slice(1:15) %>%        # top 15 most significant
+  pull(feature)
+
+
+top_args = b_rg %>% 
+  #filter(-log10(qval_joint)>150) %>% 
+  filter(-log10(qval_joint)>7.5 | (-log10(qval_joint)>4 & coef > 3|mean_abund>25000)) %>% 
+  dplyr::select(feature) %>% distinct() %>% pull(); top_args
+
+
+# Add a column for labels in the volcano data
+b_rg$label_it <- ifelse(b_rg$feature %in% top_args, b_rg$feature, NA)
+
+# Volcano plot with top ARG labels
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+    geom_text_repel(
+    aes(label = label_it),
+    size = 3,                 # smaller text
+    max.overlaps = Inf,         # don’t drop labels
+    box.padding = 0.3,          # space around text
+    point.padding = 0.3,        # space from points
+    min.segment.length = 0,     # always draw connecting line
+    segment.size = 0.1,
+    na.rm = TRUE,
+    show.legend = FALSE,
+    fontface = "italic"
+  ) +
+  #geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+    scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5, 10, 12.5, 15),
+    limits = c(0, 15)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "grey88"),  # <--- major grid color
+    panel.grid.minor = element_line(color = "grey88")  # <--- minor grid color
+    #panel.border = element_rect(color = "", fill = NA)  # optional border
+  ) +
+  coord_cartesian(clip = "off")
+
+volc
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by ARG.png",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by ARG.svg",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 500
+)
+
+# Get plot with all ARGs for visualizing---
+
+top_args <- b_rg %>%
+  arrange(qval_joint) %>%
+  #slice(1:15) %>%        # top 15 most significant
+  pull(feature)
+
+
+# Add a column for labels in the volcano data
+b_rg$label_it <- ifelse(b_rg$feature %in% top_args, b_rg$feature, NA)
+
+# Volcano plot with top ARG labels
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+    geom_text_repel(
+    aes(label = label_it),
+    size = 3,                 # smaller text
+    max.overlaps = Inf,         # don’t drop labels
+    box.padding = 0.3,          # space around text
+    point.padding = 0.3,        # space from points
+    min.segment.length = 0,     # always draw connecting line
+    segment.size = 0.1,
+    na.rm = TRUE,
+    show.legend = FALSE,
+    fontface = "italic"
+  ) +
+  #geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5, 10, 12.5, 15),
+    limits = c(0, 15)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean Rel. Abundance"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "grey88"),  # <--- major grid color
+    panel.grid.minor = element_line(color = "grey88")  # <--- minor grid color
+    #panel.border = element_rect(color = "", fill = NA)  # optional border
+  ) +
+  coord_cartesian(clip = "off")
+
+volc
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by ARG All ARGs Labeled.png",
+  width = 8,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
+
+
+
+#filtering for boxplots-----
+
+sig_feats <- union(
+  sig_abund_joint$feature,
+  sig_prev_joint$feature
+)
+
+boxplot_df <- plot_df %>%
+  filter(feature %in% sig_feats)
+
+#join MaAsLin3 stats for box plots (effect sizes, q-values) -------
+top_feat <- sig_abund_joint %>%
+  filter(feature %in% sig_feats) %>%
+  arrange(qval_joint)
+
+boxplot_joined_df <- boxplot_df %>%
+  left_join(
+    top_feat %>% select(feature, coef, qval_joint),
+    by = "feature"
+  )
+
+
+#loop through top args------------
+
+for (arg_var in top_args) {
+
+
+plot <- boxplot_joined_df %>% 
+  filter(feature == arg_var) %>% 
+  ggplot(., aes(x = Type, y = abundance, colour = Type)) +
+  theme_minimal() +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.6) +
+  labs(y = paste0(arg_var," Abundance"))
+
+print(plot)
+
+}
+
+#create arg box plots using faceting approach
+
+library(ggpubr)
+
+plot <- boxplot_joined_df %>% 
+  filter(feature %in% top_args) %>% 
+  ggplot(aes(x = Type, y = abundance)) +
+  
+  geom_boxplot(
+    outlier.shape = NA,
+    color = "black",
+    width = 0.6
+  ) +
+  
+  geom_jitter(
+    aes(color = Type),
+    width = 0.15,
+    size = 1.2,
+    alpha = 0.6
+  ) +
+  
+  stat_compare_means(
+    method = "kruskal.test",
+    label = "p.format",
+    size = 3
+  ) +
+  
+  facet_wrap(
+    ~ feature,
+    scales = "free_y",
+    ncol = 4
+  ) +
+  
+  labs(
+    x = "",
+    y = "Abundance"
+  ) +
+  
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 5),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "italic", size = 9),
+    legend.position = "bottom"
+  )
+
+plot
+
+# Save final heatmap
+ggsave(
+  plot = plot,
+  filename = "Biofilm Project Figures/CARD-Box Plots Faceted of Top ARGs.png",
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 300
+)
+
+
+
+
+#stats-------------
+# 
+# # Cupriavidus
+# stat.test <- plot_df %>%
+#   filter(genus == "Cupriavidus") %>% 
+#   pairwise_wilcox_test(
+#     abundance ~ growth,
+#     p.adjust.method = "fdr")
+# 
+# c_plot <- cup_plot + stat_pvalue_manual(stat.test, label = "p.adj", y.position = c(0.55, 0.65, 0.75))
+
+
+#MaAsLin3 table------
+
+# mas_table <- test %>% 
+#   select(name.x, qval_joint.x, mean_abund, genus) %>% 
+#   filter(qval_joint.x > 0) %>% 
+#   arrange(qval_joint.x) %>%  
+#   slice(1:21)
+# 
+# write_xlsx(mas_table, "maaslin3_table.xlsx")
+
+
+
+#------Extract All ARGs in Table Format by Mean Abundance, Coefficient, 
+ontologies = card_merged_w_ont_df %>% 
+  
+  dplyr::select(Gene,`AMR Gene Family`,`Resistance Mechanism`,`card_edited_drug_class`,`AMR Gene Family`)
+
+args = b_rg %>% 
+  dplyr::select(feature, coef,N, mean_abund,qval_joint) %>% 
+  
+  mutate(enriched = ifelse(coef>0, "Wastewater", "Biofilm")) %>% 
+  
+  dplyr::rename("Gene" = "feature") %>% 
+  
+  left_join(ontologies,by = c("Gene")) %>% distinct()
+
+#------Stacked Bar of What's Enriched in WW vs Biofilm----------------
+
+stacked_bar =  args %>% 
+  
+  group_by(enriched) %>% 
+  mutate(total = n()) %>% 
+  ungroup() %>% 
+  
+  
+  group_by(enriched,card_edited_drug_class) %>% 
+  mutate(count = n()) %>% 
+  dplyr::select(enriched,card_edited_drug_class,total,count) %>% distinct() %>% 
+  summarise(percent = count/total * 100) %>% 
+  ungroup() 
+  
+
+  
+  
+  
+ggplot(stacked_bar, aes(x = factor(enriched), y = percent, fill = card_edited_drug_class)) +
+  geom_col(position = "stack") 
+  
+
+
+```
+ 
+ 
+## Maaslin3-ONLY SHARED DATES WITH BIOFILM- Drug Class
+```{r}
+
+#specify dates-------------
+dates <- as.Date(c(
+  "2024-09-09", "2024-09-11", "2024-09-12",
+  "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09"
+))
+
+# Specify locations to include--------
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+
+#libraries--------
+library(ggplot2)
+library(readxl)
+library(here)
+library(cowplot)
+library(tidyverse)
+library(patchwork)
+library(readr)
+library(phyloseq)
+library(microshades)
+library(ape)
+library(vegan)
+library(ggpubr)
+library(rstatix)
+library(RColorBrewer)
+library(maaslin3)
+library(writexl)
+library(ggrepel)
+
+#maaslin3----------------
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    RPKM = as.numeric(RPKM),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,RPKM,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  mutate(Date = as.Date(Date)) %>% 
+  
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Endcap", "H_WW")) %>% 
+ 
+  #filter specific dates shared with biofilm
+  filter(
+    (Type == "H_WW" & Date %in% dates) |
+    (Type != "H_WW")
+  ) %>%
+  
+  #change label names
+  mutate(
+    Type = factor(Type, levels = c("Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type))
+  ) 
+
+df_sum <- df %>%
+  group_by(SampleID, card_edited_drug_class) %>%
+  summarise(
+    RPKM = sum(RPKM, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+otu <- df_sum %>%
+  dplyr::select(SampleID, card_edited_drug_class, RPKM) %>%
+  tidyr::pivot_wider(
+    names_from = card_edited_drug_class,
+    values_from = RPKM,
+    values_fill = 0
+  ) %>%
+  tibble::column_to_rownames("SampleID")
+
+meta <- df %>%
+  dplyr::select(
+    SampleID,
+    Date,
+    Location,
+    Type
+  ) %>%
+  distinct() %>%
+  tibble::column_to_rownames("SampleID")
+
+#MaAsLin3------------------------
+fit_data <- maaslin3(
+  input_data = otu,
+  input_metadata = meta,
+  output = "maaslin3_output",
+  fixed_effects = c("Type"),
+  random_effects = c("Location"),
+  normalization = "NONE",
+  transform = "LOG",
+  standardize = TRUE,
+  min_prevalence = 0.1,
+  verbosity = "ERROR"
+)
+
+
+
+#plotting it-------------
+plot_df <- fit_data$normalized %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleID") %>%
+  pivot_longer(
+    cols = -SampleID,
+    names_to = "feature",
+    values_to = "abundance"
+  ) %>%
+  left_join(
+    fit_data$metadata %>%
+      rownames_to_column("SampleID"),
+    by = "SampleID"
+  )
+
+
+#volcano plot----------
+
+#get mean abundance directly from MaAslin3 normalized data
+# Significant features
+sig_abund_joint <- subset(fit_data$fit_data_abundance$results, qval_joint < 0.05)
+sig_prev_joint <- subset(fit_data$fit_data_prevalence$results, qval_joint < 0.05)
+
+
+
+sig_feats <- union(sig_abund_joint$feature, sig_prev_joint$feature)
+
+top_feat <- sig_abund_joint %>%
+  filter(feature %in% sig_feats) %>%
+  arrange(qval_joint)
+
+# Compute mean abundance directly from MaAsLin3 normalized table
+mean_abund <- colMeans(fit_data$normalized[, top_feat$feature, drop = FALSE], na.rm = TRUE)
+top_feat$mean_abund <- mean_abund
+
+# Optionally join extra info if you have a taxonomy table
+# top_feat <- left_join(top_feat, top_feat_unique, by = "feature")
+
+# Example: volcano for a subset of features (adjust as needed)
+b_rg <- top_feat %>%
+  # filter(name.x == "growthregrowth") %>% # if you have a variable for before/regrowth
+  filter(!is.na(feature))  # just keep valid features
+
+# Label a few genera if you have that info
+# b_rg$label_it <- ifelse(b_rg$genus %in% c("Cupriavidus","Ralstonia","Burkholderia","Pseudomonas","Alcaligenes","Stenotrophomonas"), b_rg$genus, NA)
+
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+  # geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values =c("#6d7ecd", "#c86c69")) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5),
+    limits = c(0, 7.5)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal() +
+  coord_cartesian(clip = "off")
+
+volc
+
+#get top classes-------
+
+#label top args in new volcano plot----------
+# Get top ARGs (e.g., top 5 by q-value)
+
+top_classes = b_rg %>% 
+  #filter(-log10(qval_joint)>8 | (-log10(qval_joint)>5 & coef > 3) | mean_abund > 0.06) %>% 
+  dplyr::select(feature) %>% distinct() %>% pull(); top_classes
+
+
+# Add a column for labels in the volcano data
+b_rg$label_it <- ifelse(b_rg$feature %in% top_classes, b_rg$feature, NA)
+
+# Volcano plot with top ARG labels
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+    geom_text_repel(
+    aes(label = label_it),
+    size = 3,                 # smaller text
+    max.overlaps = Inf,         # don’t drop labels
+    box.padding = 0.3,          # space around text
+    point.padding = 0.3,        # space from points
+    min.segment.length = 0,     # always draw connecting line
+    segment.size = 0.5,
+    na.rm = TRUE,
+    show.legend = FALSE,
+    fontface = "italic"
+  ) +
+  #geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5),
+    limits = c(0, 7.5)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "grey88"),  # <--- major grid color
+    panel.grid.minor = element_line(color = "grey88")  # <--- minor grid color
+    #panel.border = element_rect(color = "", fill = NA)  # optional border
+  ) +
+  coord_cartesian(clip = "off")
+
+volc
+
+
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by Drug Class.png",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by Drug Class.svg",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 500
+)
+
+
+
+
+```
+ 
+ 
+ #Time Series
+##Maaslin3-ONLY SHARED DATES WITH BIOFILM- ARGs
+```{r}
+
+#specify dates-------------
+dates <- as.Date(c(
+  "2024-09-09", "2024-09-11", "2024-09-12",
+  "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09"
+))
+
+# Specify locations to include--------
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+
+#libraries--------
+library(ggplot2)
+library(readxl)
+library(here)
+library(cowplot)
+library(tidyverse)
+library(patchwork)
+library(readr)
+library(phyloseq)
+library(microshades)
+library(ape)
+library(vegan)
+library(ggpubr)
+library(rstatix)
+library(RColorBrewer)
+library(maaslin3)
+library(writexl)
+library(ggrepel)
+
+#maaslin3----------------
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    RPKM = as.numeric(RPKM),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,RPKM,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  mutate(Date = as.Date(Date)) %>% 
+  
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Endcap", "H_WW")) %>% 
+ 
+  #filter specific dates shared with biofilm
+  filter(
+    (Type == "H_WW" & Date %in% dates) |
+    (Type != "H_WW")
+  ) %>%
+  
+  #change label names
+  mutate(
+    Type = factor(Type, levels = c("Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type))
+  ) 
+
+df_sum <- df %>%
+  group_by(SampleID, Gene) %>%
+  summarise(
+    RPKM = sum(RPKM, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+otu <- df_sum %>%
+  dplyr::select(SampleID, Gene, RPKM) %>%
+  tidyr::pivot_wider(
+    names_from = Gene,
+    values_from = RPKM,
+    values_fill = 0
+  ) %>%
+  tibble::column_to_rownames("SampleID")
+
+meta <- df %>%
+  dplyr::select(
+    SampleID,
+    Date,
+    Location,
+    Type
+  ) %>%
+  distinct() %>%
+  tibble::column_to_rownames("SampleID")
+
+#MaAsLin3------------------------
+
+fit_data <- maaslin3(
+  input_data = otu,
+  input_metadata = meta,
+  output = "maaslin3_output",
+  fixed_effects = c("Type"),
+  random_effects = c("Location"),
+  normalization = "NONE",
+  transform = "LOG",
+  standardize = TRUE,
+  min_prevalence = 0.1,
+  verbosity = "ERROR"
+)
+
+
+
+#plotting it-------------
+plot_df <- fit_data$normalized %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleID") %>%
+  pivot_longer(
+    cols = -SampleID,
+    names_to = "feature",
+    values_to = "abundance"
+  ) %>%
+  left_join(
+    fit_data$metadata %>%
+      rownames_to_column("SampleID"),
+    by = "SampleID"
+  )
+
+
+#volcano plot----------
+
+#get mean abundance directly from MaAslin3 normalized data
+# Significant features
+sig_abund_joint <- subset(fit_data$fit_data_abundance$results, qval_joint < 0.05)
+sig_prev_joint <- subset(fit_data$fit_data_prevalence$results, qval_joint < 0.05)
+
+
+
+sig_feats <- union(sig_abund_joint$feature, sig_prev_joint$feature)
+
+top_feat <- sig_abund_joint %>%
+  filter(feature %in% sig_feats) %>%
+  arrange(qval_joint)
+
+# Compute mean abundance directly from MaAsLin3 normalized table
+mean_abund <- colMeans(fit_data$normalized[, top_feat$feature, drop = FALSE], na.rm = TRUE)
+top_feat$mean_abund <- mean_abund
+
+# Optionally join extra info if you have a taxonomy table
+# top_feat <- left_join(top_feat, top_feat_unique, by = "feature")
+
+# Example: volcano for a subset of features (adjust as needed)
+b_rg <- top_feat %>%
+  # filter(name.x == "growthregrowth") %>% # if you have a variable for before/regrowth
+  filter(!is.na(feature))  # just keep valid features
+
+# Label a few genera if you have that info
+# b_rg$label_it <- ifelse(b_rg$genus %in% c("Cupriavidus","Ralstonia","Burkholderia","Pseudomonas","Alcaligenes","Stenotrophomonas"), b_rg$genus, NA)
+
+poster_colors = c("#dc9298","#a51c2f","#3d3d3d","#f3e3e5","#417c8c","#e57262","#915493")
+
+poster_colors = c("#ce2e2d","#c00300","#88b8c5","#dd9298","#ab74a8","#fc3b3b","#a61d30","#eededf","#dc6c64","#467d91")
+
+
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+  # geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+    scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5, 10, 12.5, 15),
+    limits = c(0, 15)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal() +
+  coord_cartesian(clip = "off")
+
+volc
+
+#get top ARGs-------
+
+#label top args in new volcano plot----------
+# Get top ARGs (e.g., top 5 by q-value)
+
+
+top_args <- b_rg %>%
+  arrange(qval_joint) %>%
+  dplyr::slice(1:15) %>%        # top 15 most significant
+  pull(feature)
+
+
+top_args = b_rg %>% 
+  #filter(-log10(qval_joint)>150) %>% 
+  filter(-log10(qval_joint)>7.5 | (-log10(qval_joint)>4 & coef > 3|mean_abund>25000)) %>% 
+  dplyr::select(feature) %>% distinct() %>% pull(); top_args
+
+
+# Add a column for labels in the volcano data
+b_rg$label_it <- ifelse(b_rg$feature %in% top_args, b_rg$feature, NA)
+
+# Volcano plot with top ARG labels
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+    geom_text_repel(
+    aes(label = label_it),
+    size = 3,                 # smaller text
+    max.overlaps = Inf,         # don’t drop labels
+    box.padding = 0.3,          # space around text
+    point.padding = 0.3,        # space from points
+    min.segment.length = 0,     # always draw connecting line
+    segment.size = 0.1,
+    na.rm = TRUE,
+    show.legend = FALSE,
+    fontface = "italic"
+  ) +
+  #geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+    scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5, 10, 12.5, 15),
+    limits = c(0, 15)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "grey88"),  # <--- major grid color
+    panel.grid.minor = element_line(color = "grey88")  # <--- minor grid color
+    #panel.border = element_rect(color = "", fill = NA)  # optional border
+  ) +
+  coord_cartesian(clip = "off")
+
+volc
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by ARG.png",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by ARG.svg",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 500
+)
+
+# Get plot with all ARGs for visualizing---
+
+top_args <- b_rg %>%
+  arrange(qval_joint) %>%
+  #slice(1:15) %>%        # top 15 most significant
+  pull(feature)
+
+
+# Add a column for labels in the volcano data
+b_rg$label_it <- ifelse(b_rg$feature %in% top_args, b_rg$feature, NA)
+
+# Volcano plot with top ARG labels
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+    geom_text_repel(
+    aes(label = label_it),
+    size = 3,                 # smaller text
+    max.overlaps = Inf,         # don’t drop labels
+    box.padding = 0.3,          # space around text
+    point.padding = 0.3,        # space from points
+    min.segment.length = 0,     # always draw connecting line
+    segment.size = 0.1,
+    na.rm = TRUE,
+    show.legend = FALSE,
+    fontface = "italic"
+  ) +
+  #geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5, 10, 12.5, 15),
+    limits = c(0, 15)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean Rel. Abundance"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "grey88"),  # <--- major grid color
+    panel.grid.minor = element_line(color = "grey88")  # <--- minor grid color
+    #panel.border = element_rect(color = "", fill = NA)  # optional border
+  ) +
+  coord_cartesian(clip = "off")
+
+volc
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by ARG All ARGs Labeled.png",
+  width = 8,
+  height = 6,
+  units = "in",
+  dpi = 300
+)
+
+
+
+#filtering for boxplots-----
+
+sig_feats <- union(
+  sig_abund_joint$feature,
+  sig_prev_joint$feature
+)
+
+boxplot_df <- plot_df %>%
+  filter(feature %in% sig_feats)
+
+#join MaAsLin3 stats for box plots (effect sizes, q-values) -------
+top_feat <- sig_abund_joint %>%
+  filter(feature %in% sig_feats) %>%
+  arrange(qval_joint)
+
+boxplot_joined_df <- boxplot_df %>%
+  left_join(
+    top_feat %>% select(feature, coef, qval_joint),
+    by = "feature"
+  )
+
+
+#loop through top args------------
+
+for (arg_var in top_args) {
+
+
+plot <- boxplot_joined_df %>% 
+  filter(feature == arg_var) %>% 
+  ggplot(., aes(x = Type, y = abundance, colour = Type)) +
+  theme_minimal() +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.6) +
+  labs(y = paste0(arg_var," Abundance"))
+
+print(plot)
+
+}
+
+#create arg box plots using faceting approach
+
+library(ggpubr)
+
+plot <- boxplot_joined_df %>% 
+  filter(feature %in% top_args) %>% 
+  ggplot(aes(x = Type, y = abundance)) +
+  
+  geom_boxplot(
+    outlier.shape = NA,
+    color = "black",
+    width = 0.6
+  ) +
+  
+  geom_jitter(
+    aes(color = Type),
+    width = 0.15,
+    size = 1.2,
+    alpha = 0.6
+  ) +
+  
+  stat_compare_means(
+    method = "kruskal.test",
+    label = "p.format",
+    size = 3
+  ) +
+  
+  facet_wrap(
+    ~ feature,
+    scales = "free_y",
+    ncol = 4
+  ) +
+  
+  labs(
+    x = "",
+    y = "Abundance"
+  ) +
+  
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 5),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "italic", size = 9),
+    legend.position = "bottom"
+  )
+
+plot
+
+# Save final heatmap
+ggsave(
+  plot = plot,
+  filename = "Biofilm Project Figures/CARD-Box Plots Faceted of Top ARGs.png",
+  width = 8,
+  height = 12,
+  units = "in",
+  dpi = 300
+)
+
+
+
+
+#stats-------------
+# 
+# # Cupriavidus
+# stat.test <- plot_df %>%
+#   filter(genus == "Cupriavidus") %>% 
+#   pairwise_wilcox_test(
+#     abundance ~ growth,
+#     p.adjust.method = "fdr")
+# 
+# c_plot <- cup_plot + stat_pvalue_manual(stat.test, label = "p.adj", y.position = c(0.55, 0.65, 0.75))
+
+
+#MaAsLin3 table------
+
+# mas_table <- test %>% 
+#   select(name.x, qval_joint.x, mean_abund, genus) %>% 
+#   filter(qval_joint.x > 0) %>% 
+#   arrange(qval_joint.x) %>%  
+#   slice(1:21)
+# 
+# write_xlsx(mas_table, "maaslin3_table.xlsx")
+
+
+
+#------Extract All ARGs in Table Format by Mean Abundance, Coefficient, 
+ontologies = card_merged_w_ont_df %>% 
+  
+  dplyr::select(Gene,`AMR Gene Family`,`Resistance Mechanism`,`card_edited_drug_class`,`AMR Gene Family`)
+
+args = b_rg %>% 
+  dplyr::select(feature, coef,N, mean_abund,qval_joint) %>% 
+  
+  mutate(enriched = ifelse(coef>0, "Wastewater", "Biofilm")) %>% 
+  
+  dplyr::rename("Gene" = "feature") %>% 
+  
+  left_join(ontologies,by = c("Gene")) %>% distinct()
+
+#------Stacked Bar of What's Enriched in WW vs Biofilm----------------
+
+stacked_bar =  args %>% 
+  
+  group_by(enriched) %>% 
+  mutate(total = n()) %>% 
+  ungroup() %>% 
+  
+  
+  group_by(enriched,card_edited_drug_class) %>% 
+  mutate(count = n()) %>% 
+  dplyr::select(enriched,card_edited_drug_class,total,count) %>% distinct() %>% 
+  summarise(percent = count/total * 100) %>% 
+  ungroup() 
+  
+
+  
+  
+  
+ggplot(stacked_bar, aes(x = factor(enriched), y = percent, fill = card_edited_drug_class)) +
+  geom_col(position = "stack") 
+  
+
+
+```
+ 
+ 
+## Maaslin3-ONLY SHARED DATES WITH BIOFILM- Drug Class
+```{r}
+
+#specify dates-------------
+dates <- as.Date(c(
+  "2024-09-09", "2024-09-11", "2024-09-12",
+  "2024-10-30", "2024-10-31", "2024-12-04", "2024-12-09"
+))
+
+# Specify locations to include--------
+locations <- c("FIONA", "SHREK", "OSCAR", "MARIO", "LUIGI")
+# Assuming 'metaphlan_output' is your MetaPhlAn data frame
+
+
+
+#libraries--------
+library(ggplot2)
+library(readxl)
+library(here)
+library(cowplot)
+library(tidyverse)
+library(patchwork)
+library(readr)
+library(phyloseq)
+library(microshades)
+library(ape)
+library(vegan)
+library(ggpubr)
+library(rstatix)
+library(RColorBrewer)
+library(maaslin3)
+library(writexl)
+library(ggrepel)
+
+#maaslin3----------------
+analysis_df <- card_merged_w_ont_df %>%
+  filter(
+    Type %in% c("Drain", "Endcap", "H_WW")
+  ) %>%
+  mutate(
+    Date   = as.Date(Date),
+    RPKM = as.numeric(RPKM),
+    Type   = factor(Type, levels = c("H_WW","Endcap","Drain" ))
+  ) %>%
+  left_join(
+    sixteens_df,
+    by = c("Type", "Location", "Date")
+  ) %>%
+  drop_na(timepoint)
+
+
+biofilm_dates <- analysis_df %>%
+  filter(Type %in% c("Endcap")) %>% 
+  group_by(Location, timepoint) %>%
+  mutate(
+    biofilm_ref_date = Date
+  ) %>% 
+    ungroup() %>% 
+  dplyr::distinct(Location,timepoint,biofilm_ref_date)
+
+filtered_df <- analysis_df %>%
+  mutate(
+         Date = as.Date(Date)) %>%
+  left_join(biofilm_dates, by = c("Location", "timepoint")) %>% 
+
+  mutate(
+    date_diff_days = abs(as.numeric(biofilm_ref_date-Date))
+  ) %>% 
+
+  #match temporal subsampling
+  group_by(Location, timepoint, Type) %>%
+  mutate(
+    best_date = min(date_diff_days)
+  ) %>%
+  ungroup() %>% 
+
+  filter(
+    (best_date == date_diff_days)
+  ) %>% 
+  
+  dplyr::select(-best_date,-date_diff_days,-biofilm_ref_date)
+
+df <- card_merged_w_ont_df %>% 
+  
+  #clean ontology df
+  dplyr::select(Gene,SampleID, Date, Location, Type,RPKM,`Drug Class`, `Resistance Mechanism`, class, mechanism,card_edited_drug_class, group) %>% 
+  
+  mutate(Date = as.Date(Date)) %>% 
+  
+  filter(Location %in% locations) %>% 
+  
+  #filter args in rpip list
+  #filter(Species %in% c(amr_genes)) %>% 
+  
+  #filter for sample type
+  filter(Type %in% c("Endcap", "H_WW")) %>% 
+ 
+  #filter specific dates shared with biofilm
+  filter(
+    (Type == "H_WW" & Date %in% dates) |
+    (Type != "H_WW")
+  ) %>%
+  
+  #change label names
+  mutate(
+    Type = factor(Type, levels = c("Endcap", "H_WW")),
+    TypeLabel = case_when(Type == "H_WW" ~ "Hospital Wastewater", 
+                          TRUE ~ as.character(Type))
+  ) 
+
+df_sum <- df %>%
+  group_by(SampleID, card_edited_drug_class) %>%
+  summarise(
+    RPKM = sum(RPKM, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+otu <- df_sum %>%
+  dplyr::select(SampleID, card_edited_drug_class, RPKM) %>%
+  tidyr::pivot_wider(
+    names_from = card_edited_drug_class,
+    values_from = RPKM,
+    values_fill = 0
+  ) %>%
+  tibble::column_to_rownames("SampleID")
+
+meta <- df %>%
+  dplyr::select(
+    SampleID,
+    Date,
+    Location,
+    Type
+  ) %>%
+  distinct() %>%
+  tibble::column_to_rownames("SampleID")
+
+#MaAsLin3------------------------
+fit_data <- maaslin3(
+  input_data = otu,
+  input_metadata = meta,
+  output = "maaslin3_output",
+  fixed_effects = c("Type"),
+  random_effects = c("Location"),
+  normalization = "NONE",
+  transform = "LOG",
+  standardize = TRUE,
+  min_prevalence = 0.1,
+  verbosity = "ERROR"
+)
+
+
+
+#plotting it-------------
+plot_df <- fit_data$normalized %>%
+  as.data.frame() %>%
+  rownames_to_column("SampleID") %>%
+  pivot_longer(
+    cols = -SampleID,
+    names_to = "feature",
+    values_to = "abundance"
+  ) %>%
+  left_join(
+    fit_data$metadata %>%
+      rownames_to_column("SampleID"),
+    by = "SampleID"
+  )
+
+
+#volcano plot----------
+
+#get mean abundance directly from MaAslin3 normalized data
+# Significant features
+sig_abund_joint <- subset(fit_data$fit_data_abundance$results, qval_joint < 0.05)
+sig_prev_joint <- subset(fit_data$fit_data_prevalence$results, qval_joint < 0.05)
+
+
+
+sig_feats <- union(sig_abund_joint$feature, sig_prev_joint$feature)
+
+top_feat <- sig_abund_joint %>%
+  filter(feature %in% sig_feats) %>%
+  arrange(qval_joint)
+
+# Compute mean abundance directly from MaAsLin3 normalized table
+mean_abund <- colMeans(fit_data$normalized[, top_feat$feature, drop = FALSE], na.rm = TRUE)
+top_feat$mean_abund <- mean_abund
+
+# Optionally join extra info if you have a taxonomy table
+# top_feat <- left_join(top_feat, top_feat_unique, by = "feature")
+
+# Example: volcano for a subset of features (adjust as needed)
+b_rg <- top_feat %>%
+  # filter(name.x == "growthregrowth") %>% # if you have a variable for before/regrowth
+  filter(!is.na(feature))  # just keep valid features
+
+# Label a few genera if you have that info
+# b_rg$label_it <- ifelse(b_rg$genus %in% c("Cupriavidus","Ralstonia","Burkholderia","Pseudomonas","Alcaligenes","Stenotrophomonas"), b_rg$genus, NA)
+
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+  # geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values =c("#6d7ecd", "#c86c69")) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5),
+    limits = c(0, 7.5)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal() +
+  coord_cartesian(clip = "off")
+
+volc
+
+#get top classes-------
+
+#label top args in new volcano plot----------
+# Get top ARGs (e.g., top 5 by q-value)
+
+top_classes = b_rg %>% 
+  #filter(-log10(qval_joint)>8 | (-log10(qval_joint)>5 & coef > 3) | mean_abund > 0.06) %>% 
+  dplyr::select(feature) %>% distinct() %>% pull(); top_classes
+
+
+# Add a column for labels in the volcano data
+b_rg$label_it <- ifelse(b_rg$feature %in% top_classes, b_rg$feature, NA)
+
+# Volcano plot with top ARG labels
+volc <- ggplot(b_rg, aes(
+    x = coef,
+    y = -log10(qval_joint),
+    color = coef > 0,
+    size = mean_abund
+)) +
+  geom_point() +
+    geom_text_repel(
+    aes(label = label_it),
+    size = 3,                 # smaller text
+    max.overlaps = Inf,         # don’t drop labels
+    box.padding = 0.3,          # space around text
+    point.padding = 0.3,        # space from points
+    min.segment.length = 0,     # always draw connecting line
+    segment.size = 0.5,
+    na.rm = TRUE,
+    show.legend = FALSE,
+    fontface = "italic"
+  ) +
+  #geom_text(aes(label = label_it), vjust = -1, size = 3, na.rm = TRUE, show.legend = FALSE, fontface = "italic") +
+  scale_color_manual(values = c("#6d7ecd", "#c86c69"),labels = c("Biofilm","Wastewater")) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_y_continuous(
+    breaks = c(0, 2.5, 5, 7.5),
+    limits = c(0, 7.5)
+  ) +
+  labs(
+    title = "",
+    x = "Effect Size (MaAsLin3 coefficient)",
+    y = "-log10(q-value)",
+    color = "",
+    size = "Mean RPKM"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(color = "grey88"),  # <--- major grid color
+    panel.grid.minor = element_line(color = "grey88")  # <--- minor grid color
+    #panel.border = element_rect(color = "", fill = NA)  # optional border
+  ) +
+  coord_cartesian(clip = "off")
+
+volc
+
+
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by Drug Class.png",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+
+# Save final heatmap
+ggsave(
+  plot = volc,
+  filename = "Biofilm Project Figures/CARD-MaAsLin3 Volcano Plot by Drug Class.svg",
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 500
+)
+
+
+
+
+```
+ 
+ 
+ #Time Series
