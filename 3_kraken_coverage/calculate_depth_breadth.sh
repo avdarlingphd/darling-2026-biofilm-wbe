@@ -3,10 +3,10 @@ BEGIN {total=0; breadth1=0; breadth10=0; depth_sum=0; detected=0; breadth1_sum=0
 {
     total++
     if ($7 > 0) {
-        breadth1++
-        breadth1_sum += $7
-        depth_sum += $9
-        detected++
+    breadth1++          # count combinations with any 1x coverage
+    breadth1_sum += $7  # accumulate breadth_1x values for averaging later
+    depth_sum += $9     # accumulate mean_depth values for averaging later
+    detected++          # count how many combinations had any detection
     }
     if ($8 > 0) {
         breadth10++
